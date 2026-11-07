@@ -41,6 +41,9 @@ describe("re-skin", () => {
     expect(html).toContain("Fictional");
     expect(html).toContain("tel:+15125550123");
     expect(html).not.toMatch(/sk_test|re_[A-Za-z0-9]{8}|whsec_/);
+    expect(html).toContain("on Vapi");
+    expect(html).toContain("not recorded");
+    expect(html).not.toContain("<audio");
   });
 });
 

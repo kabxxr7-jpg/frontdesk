@@ -1,5 +1,5 @@
 // Starts the front desk. Reads .env (see .env.example). Prints which features are on; never prints a secret.
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { loadBusiness } from "../src/business.ts";
 import { GoogleCalendar, MemoryCalendar, type Calendar } from "../src/calendar.ts";
 import { Db } from "../src/db.ts";
@@ -48,7 +48,15 @@ const n8nUrl = env("N8N_WEBHOOK_URL");
 const n8nSecret = env("N8N_WEBHOOK_SECRET");
 const n8n = n8nUrl && n8nSecret ? { url: n8nUrl, secret: n8nSecret } : undefined;
 
+// The demo pages built by `npm run build:public`, served at / and /demos/<slug>/ (same address as the line).
+const sitePages: Record<string, string> = {};
+if (existsSync("public/index.html")) sitePages["/"] = readFileSync("public/index.html", "utf8");
+for (const slug of existsSync("public/demos") ? readdirSync("public/demos") : []) {
+  if (existsSync(`public/demos/${slug}/index.html`)) sitePages[`/demos/${slug}/`] = readFileSync(`public/demos/${slug}/index.html`, "utf8");
+}
+
 const app = createApp({
+  sitePages,
   b, db, calendar, email, stripe, n8n,
   retellApiKey: env("RETELL_API_KEY"),
   vapiSecret: env("VAPI_SERVER_SECRET"),

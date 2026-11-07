@@ -14,7 +14,8 @@
     "reskin": "node scripts/reskin.ts",
     "retell:setup": "node scripts/retell-setup.ts",
     "check:live": "node scripts/check-live.ts",
-    "vapi:setup": "node scripts/vapi-setup.ts"
+    "vapi:setup": "node scripts/vapi-setup.ts",
+    "build:public": "node scripts/build-public.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

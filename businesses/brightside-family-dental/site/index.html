@@ -23,7 +23,6 @@ th{font-size:13px;color:var(--muted);font-weight:600}
 td.k{white-space:nowrap;font-weight:600}
 .real{color:#047857;font-weight:600}.fict{color:#b45309;font-weight:600}.sim{color:#6d28d9;font-weight:600}
 @media (prefers-color-scheme:dark){.real{color:#34d399}.fict{color:#fbbf24}.sim{color:#c4b5fd}}
-audio{width:100%;margin-top:8px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media (max-width:640px){.grid{grid-template-columns:1fr}td.k{white-space:normal}}
 footer{margin-top:48px;font-size:13px;color:var(--muted)}
 </style>
@@ -33,8 +32,8 @@ footer{margin-top:48px;font-size:13px;color:var(--muted)}
 <header>
 <span class="tag">Live demo, fictional dental clinic</span>
 <h1>Call Brightside Family Dental and book a appointment</h1>
-<p>Ava is an AI receptionist. It answers questions, books into a real Google Calendar, emails you a confirmation and sends the team a summary of every call.</p>
-<p class="call off">The phone line is being set up.</p>
+<p>Ava is an AI receptionist. It answers questions, books into a real Google Calendar, emails you a confirmation, takes a deposit by card (Stripe test mode) and sends the team a summary of every call.</p>
+<a class="call" href="tel:+19293721161">Call (929) 372-1161</a><p class="muted small">US number. Calls end after 5 minutes; a few dozen calls a day are accepted. No audio is recorded; your number, the transcript and the summary are seen by the operator of this demo, so use a test name and email if you prefer.</p>
 </header>
 
 <section class="card">
@@ -42,20 +41,18 @@ footer{margin-top:48px;font-size:13px;color:var(--muted)}
 <ol><li>Book a appointment: &quot;I&#39;d like a new patient exam and cleaning next week, in the morning.&quot;</li><li>Ask a question: &quot;Do you take Delta Dental?&quot; or &quot;How much is whitening?&quot;</li><li>Move or cancel it: give the four-character code from your confirmation email.</li><li>Say something urgent (for example &quot;knocked out&quot;): it stops booking and routes you to a person.</li><li>Ask for a time outside the hours, or one that is already taken.</li></ol>
 </section>
 
-
-
 <h2>What is real and what is not</h2>
 <div class="card" style="padding:8px 12px">
 <table>
 <thead><tr><th>Part</th><th>Status</th><th>Detail</th></tr></thead>
-<tbody><tr><td class="k">Phone line, voice agent, speech</td><td class="real">Real</td><td>A real US number on Retell</td></tr><tr><td class="k">Calendar</td><td class="real">Real</td><td>Bookings land in a real Google Calendar, checked for clashes and for blocks typed in by hand</td></tr><tr><td class="k">Confirmation email</td><td class="real">Real</td><td>Sent to the address you give on the call, with your code</td></tr><tr><td class="k">Deposit</td><td class="sim">Not switched on</td><td>Code exists; not connected on this demo</td></tr><tr><td class="k">Call summary to CRM and team</td><td class="sim">Being connected</td><td>Summary is built; the CRM step is being connected</td></tr><tr><td class="k">Transfer to a person</td><td class="sim">Simulated</td><td>The business&#39;s numbers are fictional, so the agent says where it would connect you and flags the call instead</td></tr><tr><td class="k">Brightside Family Dental</td><td class="fict">Fictional</td><td>Name, address, staff, prices, phone numbers and policies are invented for this demo</td></tr></tbody>
+<tbody><tr><td class="k">Phone line, voice agent, speech</td><td class="real">Real</td><td>A real US number on Vapi, live since 7 Nov 2026. Calls are not recorded</td></tr><tr><td class="k">Calendar</td><td class="real">Real</td><td>Bookings land in a real Google Calendar, checked for clashes and for blocks typed in by hand</td></tr><tr><td class="k">Confirmation email</td><td class="real">Real</td><td>Sent to the address you give on the call, with your code</td></tr><tr><td class="k">Deposit</td><td class="real">Real, test mode</td><td>Stripe test mode: the page is real Stripe Checkout, no money moves (test card 4242 4242 4242 4242). New patient exam and cleaning $50, Teeth whitening $100.</td></tr><tr><td class="k">Call summary to CRM and team</td><td class="sim">Being connected</td><td>Summary is built; the CRM step is being connected</td></tr><tr><td class="k">Transfer to a person</td><td class="sim">Simulated</td><td>The business&#39;s numbers are fictional, so the agent says where it would connect you and flags the call instead</td></tr><tr><td class="k">Brightside Family Dental</td><td class="fict">Fictional</td><td>Name, address, staff, prices, phone numbers and policies are invented for this demo</td></tr></tbody>
 </table>
 </div>
 
 <h2>Case study: the front desk that never puts a caller on hold</h2>
 <div class="card">
 <p><strong>The problem.</strong> A small dental clinic misses calls during busy hours and after closing. Each missed call is a booking that goes to a competitor, and staff spend the day on "are you open Saturday?" questions.</p>
-<p><strong>What was built.</strong> A phone agent that runs on the business's own data: one file with hours, team, services, prices and FAQ. It checks the real calendar before offering a time, refuses double bookings, books, moves and cancels, sends a confirmation with a code, and routes anything urgent to a person. The emergency check runs in code, not only in the prompt, so it does not depend on the model remembering a rule.</p>
+<p><strong>What was built.</strong> A phone agent that runs on the business's own data: one file with hours, team, services, prices and FAQ. It checks the real calendar before offering a time, refuses double bookings, books, moves and cancels, sends a confirmation with a code, takes a deposit through Stripe Checkout, and routes anything urgent to a person. The emergency check runs in code, not only in the prompt, so it does not depend on the model remembering a rule.</p>
 <p><strong>After the call.</strong> The team gets a summary: who called, what was booked, anything urgent, and anything that failed (for example an email that bounced), so nothing is lost.</p>
 <p><strong>Re-use.</strong> The same engine is re-skinned for another business from a short brief (name, services, hours, prices, FAQ) in minutes; a plumber gets job addresses and "burst pipe" routing, a dental clinic gets "knocked-out tooth" routing.</p>
 </div>

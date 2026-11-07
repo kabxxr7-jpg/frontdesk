@@ -95,6 +95,19 @@ describe("Vapi adapter", () => {
     expect(() => createApp({ b: loadBusiness(DENTAL_DIR), db: new Db(":memory:"), calendar: new MemoryCalendar(), email: new MemoryEmail(), publicBaseUrl: "https://desk.test", linkSecret: LINK })).toThrow();
   });
 
+  it("serves the demo pages it was given, and nothing else, on GET", async () => {
+    const db = new Db(":memory:");
+    const app = createApp({ b: loadBusiness(DENTAL_DIR), db, calendar: new MemoryCalendar(), email: new MemoryEmail(), vapiSecret: SECRET, publicBaseUrl: "https://desk.test", linkSecret: LINK, sitePages: { "/": "<p>home</p>", "/demos/rapid-rooter-plumbing/": "<p>plumber</p>" } });
+    const get = (url: string) => app.handle({ method: "GET", url, headers: {}, body: Buffer.alloc(0) });
+    expect((await get("/")).body).toBe("<p>home</p>");
+    expect((await get("/demos/rapid-rooter-plumbing")).body).toBe("<p>plumber</p>");
+    expect((await get("/demos/rapid-rooter-plumbing/")).headers["content-type"]).toContain("text/html");
+    expect((await get("/.env")).status).toBe(404);
+    expect((await get("/healthz")).status).toBe(200);
+    app.close();
+    db.close();
+  });
+
   it("the assistant config carries the secret header, the tools and Vapi's time variable", () => {
     const a = buildVapiAssistant(loadBusiness(DENTAL_DIR), { serverUrl: "https://desk.test/vapi", secret: SECRET, maxCallSeconds: 300 });
     const s = JSON.stringify(a);

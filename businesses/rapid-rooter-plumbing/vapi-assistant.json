@@ -1,0 +1,284 @@
+{
+  "name": "frontdesk-rapid-rooter-plumbing",
+  "firstMessage": "Thanks for calling Rapid Rooter Plumbing, this is Max. How can I help you today?",
+  "firstMessageMode": "assistant-speaks-first",
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4.1",
+    "temperature": 0.2,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Max, the phone receptionist for Rapid Rooter Plumbing, a plumbing company (a fictional business used as a live demonstration; if asked, say so honestly).\n\n## Facts\n- Now: {{\"now\" | date: \"%A, %B %d, %Y, %I:%M %p\", \"America/Chicago\"}} (America/Chicago time). Work out dates the caller mentions (\"next Tuesday\") from today's date.\n- Address: 88 Example Road, Austin, Texas. Service area: Austin, Round Rock, Pflugerville and Cedar Park\n- We are open Monday through Friday from 7:00 AM to 6:00 PM and Saturday from 8:00 AM to 1:00 PM. We are closed on Sunday.\n- Caller's number: {{customer.number}} (empty on a web call; then ask for one).\n- Services:\n- Drain cleaning: $149, about 60 minutes\n- Leak repair visit: $129 (service call, parts extra), about 90 minutes, $39 deposit to hold the time\n- Water heater service: $189 (diagnosis, repair quoted on site), about 120 minutes, $49 deposit to hold the time\n- Free estimate: free, about 60 minutes\n- Team:\n- Marco Diaz, master plumber\n- Tessa Grant, plumber\n- Cancellation: 4 hours notice.\n\n## How to talk\n- Warm, brief, natural. One question at a time. Short sentences; this is a phone call.\n- Say times like \"Tuesday the 10th at 9:30 AM\". Never read out ISO dates, ids or JSON.\n- You are an AI assistant. If someone asks whether you are a person, say you are an AI receptionist.\n- Never give technical, safety or legal advice. Never invent prices, times or policies: use the tools.\n\n## Booking\n1. Ask what they need and pick the service. If unclear, ask.\n2. Call get_availability (use date_from/date_to for days they mention, worked out from the calendar above). Offer two or three of the returned times.\n3. When they choose: get first and last name; confirm the callback number (offer the number they are calling from); get the address for the job; ask for an email for the confirmation and have them spell it, then spell it back.\n4. Read back service, day, time and name, then call book_appointment with the slot's exact start.\n5. Read the tool's message, including the confirmation code letter by letter.\n- If a tool says a time is taken or not possible, offer the alternatives it returns.\n- To move or cancel: ask for the confirmation code, or use the number they booked with; then reschedule_appointment or cancel_appointment. Confirm before cancelling.\n\n## Questions\n- Use lookup_faq for any question about the business and read its answer. If it has no answer, offer a message or a person.\n\n## Urgent problems and people\n- If the caller describes gas, flooding, and sewage or anything that sounds urgent, call request_transfer right away with their words. That sounds like an emergency. If you smell gas, leave the building now and call 911 or your gas company from outside. If water is pouring, turn off the main water valve if you can do it safely.\n- If any tool returns error \"emergency_detected\", stop booking and follow its instruction and message at once.\n- If they ask for a person, call request_transfer and follow its instruction exactly. Only call a transfer tool when the instruction says so.\n- Out of hours, take a message: name, number, what it is about. The team receives it.\n\n## Ending\n- Ask if there is anything else. Then say goodbye and call end_call.\n- Keep calls short; this line ends calls after a few minutes.\n- If the caller is abusive or the call is clearly a test of limits, politely end the call.\n"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "lookup_faq",
+          "description": "Answer a question about the business (hours, location, prices, insurance, payment, policies) from the business's own fact sheet. Read the returned message to the caller.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "type": "string",
+                "description": "The caller's question in their own words."
+              }
+            },
+            "required": [
+              "question"
+            ]
+          }
+        },
+        "server": {
+          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "timeoutSeconds": 20,
+          "headers": {
+            "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "get_availability",
+          "description": "Find open times for a service. Call before offering any time. Dates are YYYY-MM-DD in the business's local time.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "service": {
+                "type": "string",
+                "description": "The service name or id."
+              },
+              "date_from": {
+                "type": "string",
+                "description": "First day to search, YYYY-MM-DD. Omit for today."
+              },
+              "date_to": {
+                "type": "string",
+                "description": "Last day to search, YYYY-MM-DD. Omit to search a week."
+              },
+              "part_of_day": {
+                "type": "string",
+                "enum": [
+                  "morning",
+                  "afternoon",
+                  "any"
+                ]
+              },
+              "staff": {
+                "type": "string",
+                "description": "Only when the caller asks for a specific person."
+              }
+            },
+            "required": [
+              "service"
+            ]
+          }
+        },
+        "server": {
+          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "timeoutSeconds": 20,
+          "headers": {
+            "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
+          }
+        },
+        "messages": [
+          {
+            "type": "request-start",
+            "content": "Let me check the schedule."
+          }
+        ]
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "book_appointment",
+          "description": "Book one time the caller has chosen. Only after get_availability and after reading back the details. Never invent a time.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "service": {
+                "type": "string"
+              },
+              "start": {
+                "type": "string",
+                "description": "Local start time YYYY-MM-DDTHH:MM, exactly as returned in slots[].start (offset allowed)."
+              },
+              "customer_name": {
+                "type": "string",
+                "description": "First and last name."
+              },
+              "phone": {
+                "type": "string",
+                "description": "Callback number. Omit to use the number they are calling from."
+              },
+              "email": {
+                "type": "string",
+                "description": "For the confirmation email; spelled back and confirmed."
+              },
+              "address": {
+                "type": "string",
+                "description": "Job address, when the business needs one."
+              },
+              "notes": {
+                "type": "string",
+                "description": "The reason for the visit, in the caller's words."
+              },
+              "staff": {
+                "type": "string",
+                "description": "Only when the caller asked for a specific person."
+              }
+            },
+            "required": [
+              "service",
+              "start",
+              "customer_name"
+            ]
+          }
+        },
+        "server": {
+          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "timeoutSeconds": 20,
+          "headers": {
+            "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
+          }
+        },
+        "messages": [
+          {
+            "type": "request-start",
+            "content": "One moment while I book that."
+          }
+        ]
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "reschedule_appointment",
+          "description": "Move an existing booking to a new time. Find it by confirmation code, or by the phone number it was booked under.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Four-character confirmation code, if the caller has it."
+              },
+              "phone": {
+                "type": "string",
+                "description": "Number the booking is under; omit to use the caller's number."
+              },
+              "current_start": {
+                "type": "string",
+                "description": "Only when the tool asked which booking: its start, YYYY-MM-DDTHH:MM."
+              },
+              "new_start": {
+                "type": "string",
+                "description": "The new local start time, YYYY-MM-DDTHH:MM, checked with get_availability first."
+              }
+            },
+            "required": [
+              "new_start"
+            ]
+          }
+        },
+        "server": {
+          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "timeoutSeconds": 20,
+          "headers": {
+            "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
+          }
+        },
+        "messages": [
+          {
+            "type": "request-start",
+            "content": "Let me move that for you."
+          }
+        ]
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "cancel_appointment",
+          "description": "Cancel an existing booking after the caller confirms. Find it by confirmation code, or by the phone number it was booked under.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              },
+              "current_start": {
+                "type": "string",
+                "description": "Only when the tool asked which booking."
+              }
+            },
+            "required": []
+          }
+        },
+        "server": {
+          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "timeoutSeconds": 20,
+          "headers": {
+            "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "request_transfer",
+          "description": "Decide whether and where to transfer: when the caller asks for a person, has an urgent problem, or you cannot help. Follow the returned instruction exactly.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string",
+                "description": "Why, in the caller's own words (include any symptoms or damage they described)."
+              }
+            },
+            "required": [
+              "reason"
+            ]
+          }
+        },
+        "server": {
+          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "timeoutSeconds": 20,
+          "headers": {
+            "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
+          }
+        }
+      },
+      {
+        "type": "endCall"
+      }
+    ]
+  },
+  "voice": {
+    "provider": "vapi",
+    "voiceId": "Elliot"
+  },
+  "transcriber": {
+    "provider": "deepgram",
+    "model": "nova-3",
+    "language": "en"
+  },
+  "maxDurationSeconds": 300,
+  "silenceTimeoutSeconds": 20,
+  "server": {
+    "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+    "timeoutSeconds": 20,
+    "headers": {
+      "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
+    }
+  },
+  "serverMessages": [
+    "end-of-call-report"
+  ],
+  "artifactPlan": {
+    "recordingEnabled": false
+  }
+}

@@ -1,15 +1,14 @@
-// The public demo page for one business: "call this number and book a visit", the recording, a short case study and
-// an honest table of what is real and what is fictional. Static HTML, no scripts from elsewhere, works on a phone.
+// The public demo page for one business: "call this number and book a visit", a short case study and an honest table
+// of what is real and what is fictional. No call recordings: the demo is calling the line yourself. Static HTML, no scripts from elsewhere, works on a phone.
 import type { Business } from "./business.ts";
 import { escapeHtml as e } from "./email.ts";
 import { formatPhone, renderHours, usd } from "./text.ts";
 
 export interface SiteOptions {
-  /** The real Retell number (E.164). Without it the page says the line is being set up. */
+  /** The real number (E.164). Without it the page says the line is being set up. */
   phone?: string | undefined;
-  /** Relative URL of the recording (mp3/wav) next to the page. */
-  recording?: string | undefined;
-  recordingLabel?: string | undefined;
+  /** The voice platform the number runs on, as shown in the table ("Vapi" or "Retell"). */
+  platform?: string | undefined;
   /** "8 Nov 2026": when the line went live. Only set once it really did. */
   liveSince?: string | undefined;
   depositsOn: boolean;
@@ -32,7 +31,7 @@ export function buildSite(b: Business, o: SiteOptions): string {
     `Ask for a time outside the hours, or one that is already taken.`,
   ];
   const rows: [string, string, string][] = [
-    ["Phone line, voice agent, speech", "Real", o.liveSince ? `A real US number on Retell, live since ${o.liveSince}` : "A real US number on Retell"],
+    ["Phone line, voice agent, speech", "Real", `A real US number on ${o.platform ?? "Vapi"}${o.liveSince ? `, live since ${o.liveSince}` : ""}. Calls are not recorded`],
     ["Calendar", "Real", "Bookings land in a real Google Calendar, checked for clashes and for blocks typed in by hand"],
     ["Confirmation email", "Real", "Sent to the address you give on the call, with your code"],
     ["Deposit", o.depositsOn ? "Real, test mode" : "Not switched on", o.depositsOn ? `Stripe test mode: the page is real Stripe Checkout, no money moves (test card 4242 4242 4242 4242). ${deposits.length ? `${deposits.map((s) => `${s.name} ${usd(s.depositUsd as number)}`).join(", ")}.` : ""}` : "Code exists; not connected on this demo"],
@@ -42,7 +41,7 @@ export function buildSite(b: Business, o: SiteOptions): string {
   ];
   const services = b.services.map((s) => `<li><strong>${e(s.name)}</strong> ${s.priceUsd === 0 ? "free" : e(usd(s.priceUsd))}${s.priceNote ? ` <span class="muted">(${e(s.priceNote)})</span>` : ""}${s.depositUsd ? ` <span class="pill">${e(usd(s.depositUsd))} deposit</span>` : ""}</li>`).join("");
   const phoneBlock = o.phone
-    ? `<a class="call" href="${e(telHref(o.phone))}">Call ${e(formatPhone(o.phone))}</a><p class="muted small">US number. Calls end after 5 minutes; a few dozen calls a day are accepted. Your number and what you say are seen by the operator of this demo; use a test name if you prefer.</p>`
+    ? `<a class="call" href="${e(telHref(o.phone))}">Call ${e(formatPhone(o.phone))}</a><p class="muted small">US number. Calls end after 5 minutes; a few dozen calls a day are accepted. No audio is recorded; your number, the transcript and the summary are seen by the operator of this demo, so use a test name and email if you prefer.</p>`
     : `<p class="call off">The phone line is being set up.</p>`;
   return `<!doctype html>
 <html lang="en">
@@ -69,7 +68,6 @@ th{font-size:13px;color:var(--muted);font-weight:600}
 td.k{white-space:nowrap;font-weight:600}
 .real{color:#047857;font-weight:600}.fict{color:#b45309;font-weight:600}.sim{color:#6d28d9;font-weight:600}
 @media (prefers-color-scheme:dark){.real{color:#34d399}.fict{color:#fbbf24}.sim{color:#c4b5fd}}
-audio{width:100%;margin-top:8px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media (max-width:640px){.grid{grid-template-columns:1fr}td.k{white-space:normal}}
 footer{margin-top:48px;font-size:13px;color:var(--muted)}
 </style>
@@ -87,8 +85,6 @@ ${phoneBlock}
 <h2 style="margin-top:0">Things to try</h2>
 <ol>${tryList.map((t) => `<li>${e(t)}</li>`).join("")}</ol>
 </section>
-
-${o.recording ? `<section class="card"><h2 style="margin-top:0">Recorded call</h2><p class="muted small">${e(o.recordingLabel ?? "A recorded test call.")}</p><audio controls preload="none" src="${e(o.recording)}"></audio></section>` : ""}
 
 <h2>What is real and what is not</h2>
 <div class="card" style="padding:8px 12px">
