@@ -33,6 +33,11 @@ export class MemoryCalendar implements Calendar {
   readonly blocks: [number, number][] = [];
   failNext: "create" | "update" | "delete" | "busy" | null = null;
   private seq = 0;
+  /** Simulated network latency for every call (tests). */
+  delayMs = 0;
+  private async lag(): Promise<void> {
+    if (this.delayMs > 0) await new Promise((r) => setTimeout(r, this.delayMs));
+  }
 
   private maybeFail(op: "create" | "update" | "delete" | "busy"): void {
     if (this.failNext === op) {
@@ -42,11 +47,13 @@ export class MemoryCalendar implements Calendar {
   }
 
   async externalBusy(fromUtc: number, toUtc: number): Promise<[number, number][]> {
+    await this.lag();
     this.maybeFail("busy");
     return this.blocks.filter(([s, e]) => s < toUtc && fromUtc < e);
   }
 
   async createEvent(e: CalendarEventInput): Promise<string> {
+    await this.lag();
     this.maybeFail("create");
     this.seq += 1;
     const id = `mem_evt_${this.seq}`;
@@ -55,12 +62,14 @@ export class MemoryCalendar implements Calendar {
   }
 
   async updateEvent(eventId: string, e: CalendarEventInput): Promise<void> {
+    await this.lag();
     this.maybeFail("update");
     if (!this.events.has(eventId)) throw new Error("event not found");
     this.events.set(eventId, { ...e, id: eventId });
   }
 
   async deleteEvent(eventId: string): Promise<void> {
+    await this.lag();
     this.maybeFail("delete");
     this.events.delete(eventId);
   }

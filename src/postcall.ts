@@ -209,6 +209,8 @@ export async function handleRetellWebhook(payload: unknown, d: PostCallDeps): Pr
     return { status: 200, body: { status, event, call_id: callId } };
   } catch (err) {
     d.db.releaseEvent(key);
-    return { status: 500, body: { error: "delivery_failed", message: (err instanceof Error ? err.message : String(err)).slice(0, 200) } };
+    // The reason stays in our log; the platform only needs to know to retry.
+    console.error(`post-call delivery failed for ${callId}: ${(err instanceof Error ? err.message : String(err)).slice(0, 300)}`);
+    return { status: 500, body: { error: "delivery_failed", message: "summary delivery failed; retry" } };
   }
 }

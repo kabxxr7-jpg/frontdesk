@@ -40,10 +40,15 @@ export function normalize(input: string): string {
 const NEGATIONS = new Set(["no", "not", "never", "without", "cannot", "nothing", "none", "isnt", "nobody"]);
 const PAST = /\b(last (year|month|week)|years ago|months ago|weeks ago|used to|in the past|previously|history of|had (a|an) .{0,20}(once|before))\b/;
 
-function findPhrase(text: string, phrase: string): number {
-  const re = new RegExp(`(^|[ |])${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=$|[ |])`);
-  const m = re.exec(text);
-  return m ? m.index + (m[1] as string).length : -1;
+/** Every position where the phrase occurs on word boundaries. */
+function findAll(text: string, phrase: string): number[] {
+  const re = new RegExp(`(^|[ |])${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=$|[ |])`, "g");
+  const out: number[] = [];
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    out.push(m.index + (m[1] as string).length);
+    re.lastIndex = m.index + 1;
+  }
+  return out;
 }
 
 /** Up to four words before the match, inside the same clause. */
@@ -60,17 +65,18 @@ export function classifyUrgent(b: Business, input: string): UrgentResult {
   const hits: UrgentHit[] = [];
   for (const rule of b.urgent.rules) {
     for (const phrase of rule.phrases) {
-      const at = findPhrase(text, normalize(phrase));
-      if (at < 0) continue;
-      const clauseStart = text.lastIndexOf("|", at) + 1;
-      const clauseEnd = text.indexOf("|", at);
-      const clause = text.slice(clauseStart, clauseEnd < 0 ? undefined : clauseEnd);
-      const weakenedBy = negatedBefore(text, at) ? "negated" : PAST.test(clause) ? "historical" : undefined;
-      hits.push({ rule: rule.id, phrase, ...(weakenedBy ? { weakenedBy } : {}) });
+      // Every occurrence counts: "no swollen jaw yesterday, today my jaw is swollen" must still be an emergency.
+      for (const at of findAll(text, normalize(phrase))) {
+        const clauseStart = text.lastIndexOf("|", at) + 1;
+        const clauseEnd = text.indexOf("|", at);
+        const clause = text.slice(clauseStart, clauseEnd < 0 ? undefined : clauseEnd);
+        const weakenedBy = negatedBefore(text, at) ? "negated" : PAST.test(clause) ? "historical" : undefined;
+        hits.push({ rule: rule.id, phrase, ...(weakenedBy ? { weakenedBy } : {}) });
+      }
     }
   }
   for (const phrase of b.urgent.ambiguous) {
-    if (findPhrase(text, normalize(phrase)) >= 0) hits.push({ rule: "ambiguous", phrase });
+    if (findAll(text, normalize(phrase)).length > 0) hits.push({ rule: "ambiguous", phrase });
   }
   if (hits.some((h) => h.rule !== "ambiguous" && !h.weakenedBy)) return { label: "emergency", hits };
   if (hits.length > 0) return { label: "ambiguous", hits };

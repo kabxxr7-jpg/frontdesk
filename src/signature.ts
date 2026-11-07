@@ -99,6 +99,10 @@ export class ReplayGuard {
     this.seen.set(digest, { expiresAtMs: nowMs + this.ttlMs, ...(response ? { response } : {}) });
   }
 
+  forget(digest: string): void {
+    this.seen.delete(digest);
+  }
+
   get size(): number {
     return this.seen.size;
   }

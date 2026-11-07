@@ -75,6 +75,9 @@ function page(b: Business, title: string, bodyHtml: string, status = 200): Res {
   };
 }
 
+/** Paths without query strings, and pay links without their token (the token opens a customer's page). */
+const redact = (url: string): string => (url.split("?")[0] ?? "/").replace(/^\/pay\/apt_[^/]+$/, "/pay/<token>");
+
 export interface App {
   handle(req: Req): Promise<Res>;
   deps: Deps;
@@ -93,6 +96,7 @@ export function createApp(c: AppConfig): App {
   const deps: Deps = {
     b: c.b, db: c.db, calendar: c.calendar, email: c.email, publicBaseUrl: c.publicBaseUrl.replace(/\/+$/, ""), linkSecret: c.linkSecret,
     depositsEnabled: Boolean(c.stripe), transfersLive: c.transfersLive ?? false, replyTo: c.replyTo ?? c.teamEmail, log,
+    ...(c.stripe ? { expireCheckout: (id: string) => (c.stripe as NonNullable<AppConfig["stripe"]>).client.expireCheckout(id) } : {}),
     background: (p) => {
       pending.add(p);
       void p.finally(() => pending.delete(p));
@@ -129,7 +133,13 @@ export function createApp(c: AppConfig): App {
     const call = isRecord(body["call"]) ? body["call"] : {};
     const callId = typeof call["call_id"] === "string" && /^[A-Za-z0-9_.:-]{1,100}$/.test(call["call_id"]) ? call["call_id"] : undefined;
     const fromNumber = typeof call["from_number"] === "string" ? call["from_number"] : undefined;
-    const out = await runTool(deps, name, body["args"], { nowMs: clock(), callId, fromNumber });
+    let out;
+    try {
+      out = await runTool(deps, name, body["args"], { nowMs: clock(), callId, fromNumber });
+    } catch (err) {
+      guard.forget(v.digest); // a retry of a request that crashed must be allowed to run
+      throw err;
+    }
     const res = json(200, out);
     guard.remember(v.digest, clock(), { status: res.status, body: res.body });
     return res;
@@ -146,10 +156,16 @@ export function createApp(c: AppConfig): App {
       const callId = String(r.body["call_id"]);
       const t = setTimeout(() => {
         timers.delete(t);
-        if (c.db.getCall(callId)?.summarySent) return;
-        const ended = c.db.getCall(callId)?.endedPayload;
-        const synthetic = { event: "call_analyzed", call: isRecord(ended) ? ended : { call_id: callId } };
-        void handleRetellWebhook(synthetic, postCallDeps()).then((x) => log(`summary fallback for ${callId}: ${x.status} ${JSON.stringify(x.body)}`));
+        try {
+          if (c.db.getCall(callId)?.summarySent) return;
+          const ended = c.db.getCall(callId)?.endedPayload;
+          const synthetic = { event: "call_analyzed", call: isRecord(ended) ? ended : { call_id: callId } };
+          handleRetellWebhook(synthetic, postCallDeps())
+            .then((x) => log(`summary fallback for ${callId}: ${x.status} ${JSON.stringify(x.body)}`))
+            .catch((err: unknown) => log(`summary fallback for ${callId} failed: ${err instanceof Error ? err.message : String(err)}`));
+        } catch (err) {
+          log(`summary fallback for ${callId} failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
       }, c.summaryFallbackMs ?? 180_000);
       t.unref();
       timers.add(t);
@@ -203,6 +219,31 @@ export function createApp(c: AppConfig): App {
       if (obj["payment_status"] !== "paid") {
         c.db.completeEvent(key);
         return json(200, { status: "not_paid_yet" });
+      }
+      if (a.status === "cancelled" && a.depositStatus !== "paid") {
+        a.depositStatus = "paid";
+        a.depositPaidAtMs = clock();
+        a.stripePaymentIntent = typeof obj["payment_intent"] === "string" ? obj["payment_intent"] : undefined;
+        a.history.push({ atMs: clock(), callId: a.callId, action: "deposit_paid" });
+        c.db.saveAppointment(a);
+        c.db.logTool({ callId: a.callId, atMs: clock(), tool: "stripe", ok: false, outcome: "refund_needed", note: `Deposit ${usd(a.depositUsd)} paid for ${a.code} AFTER it was cancelled: REFUND NEEDED (Stripe test mode).`, appointmentId: a.id });
+        if (a.email) {
+          const m = appointmentEmail(deps, a, "deposit_after_cancel");
+          deps.background?.(
+            sendOnce(c.db, c.email, { to: a.email, subject: m.subject, text: m.text, html: m.html, idempotencyKey: `${a.id}:deposit_after_cancel` }, clock()).catch((err: unknown) =>
+              log(`refund notice email failed: ${err instanceof Error ? err.message : String(err)}`),
+            ),
+          );
+        }
+        if (c.teamEmail) {
+          deps.background?.(
+            sendOnce(c.db, c.email, { to: c.teamEmail, subject: `REFUND NEEDED: deposit paid for cancelled ${a.code}`, text: `A ${usd(a.depositUsd)} deposit (Stripe test mode, payment ${a.stripePaymentIntent ?? "?"}) was paid for ${a.code}, which was already cancelled. Refund it in Stripe.`, idempotencyKey: `${a.id}:refund_team` }, clock()).catch((err: unknown) =>
+              log(`refund team email failed: ${err instanceof Error ? err.message : String(err)}`),
+            ),
+          );
+        }
+        c.db.completeEvent(key);
+        return json(200, { status: "paid_after_cancel_refund_needed", appointment: a.code });
       }
       if (a.depositStatus !== "paid") {
         a.depositStatus = "paid";
@@ -265,10 +306,13 @@ export function createApp(c: AppConfig): App {
         },
         `checkout:${a.id}:${Math.floor(now / 3_600_000)}`,
       );
-      a.stripeSessionId = session.id;
-      a.stripeSessionUrl = session.url;
-      a.stripeSessionExpiresMs = session.expiresAtSec * 1000;
-      c.db.saveAppointment(a);
+      // Re-read: a cancel or a payment may have landed while Stripe answered. Change only the session fields.
+      const latest = c.db.getAppointment(a.id);
+      if (latest) c.db.saveAppointment({ ...latest, stripeSessionId: session.id, stripeSessionUrl: session.url, stripeSessionExpiresMs: session.expiresAtSec * 1000 });
+      if (latest && (latest.status === "cancelled" || latest.depositStatus === "paid")) {
+        if (latest.status === "cancelled") void deps.expireCheckout?.(session.id).catch(() => {});
+        return page(b, latest.status === "cancelled" ? "Appointment cancelled" : "Deposit already paid", latest.status === "cancelled" ? "<p>This appointment was cancelled, so no deposit is needed.</p>" : "<p>Your deposit is already paid. Thank you.</p>");
+      }
       return { status: 303, headers: { location: session.url, "cache-control": "no-store" }, body: "" };
     } catch (err) {
       log(`checkout creation failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -298,10 +342,10 @@ export function createApp(c: AppConfig): App {
     async handle(req) {
       try {
         const res = await handle(req);
-        log(`${req.method} ${req.url.split("?")[0]} ${res.status}`);
+        log(`${req.method} ${redact(req.url)} ${res.status}`);
         return res;
       } catch (err) {
-        log(`${req.method} ${req.url.split("?")[0]} 500 ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
+        log(`${req.method} ${redact(req.url)} 500 ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
         return json(500, { error: "internal_error" });
       }
     },
@@ -334,7 +378,11 @@ export function createHttpServer(app: App): Server {
       if (aborted) return;
       void app
         .handle({ method: req.method ?? "GET", url: req.url ?? "/", headers: req.headers, body: Buffer.concat(chunks) })
-        .then((r) => res.writeHead(r.status, r.headers).end(r.body));
+        .then((r) => res.writeHead(r.status, r.headers).end(r.body))
+        .catch(() => {
+          if (!res.headersSent) res.writeHead(500, JSON_H);
+          res.end(JSON.stringify({ error: "internal_error" }));
+        });
     });
   });
 }

@@ -66,6 +66,12 @@ export class StripeClient {
     return json;
   }
 
+  /** Stops an open Checkout Session from taking payment (used when the booking is cancelled). */
+  async expireCheckout(sessionId: string): Promise<void> {
+    if (!/^cs_(test|live)_[A-Za-z0-9]+$/.test(sessionId)) throw new Error("not a checkout session id");
+    await this.post(`/checkout/sessions/${sessionId}/expire`, {}, `expire:${sessionId}`);
+  }
+
   async createCheckout(i: CheckoutInput, idempotencyKey: string): Promise<CheckoutSession> {
     const cents = Math.round(i.amountUsd * 100);
     const form: Record<string, string> = {

@@ -8,7 +8,7 @@ import { escapeHtml, normalizeSpokenEmail, sendOnce, type EmailSender } from "./
 import { payToken } from "./stripe.ts";
 import { formatPhone, joinList, looksLikeAdvice, matchFaq, renderHours, renderTokens, usd } from "./text.ts";
 import { addDays, compareYmd, daysBetween, localYmd, spokenDate, spokenDateTime, toIsoWithOffset, weekdayName, type Ymd } from "./time.ts";
-import { checkSlot, closedDateInfo, findSlots, isOpenAt, nearestSlots, type Busy, type Slot, type SlotCheck } from "./scheduler.ts";
+import { checkSlot, closedDateInfo, findSlots, instantOf, isOpenAt, nearestSlots, type Busy, type Slot, type SlotCheck } from "./scheduler.ts";
 import { classifyUrgent } from "./urgent.ts";
 import { NAME_PATTERN, fail, isRecord, missingFields, readDate, readPhone, readStart, readText, type SpokenError } from "./validate.ts";
 
@@ -30,6 +30,10 @@ export interface Deps {
   transfersLive: boolean;
   replyTo?: string | undefined;
   log?: (line: string) => void;
+  /** Overrides for the calendar time budgets (tests). */
+  calendarBudgetMs?: { busy: number; write: number };
+  /** Expires an open Stripe Checkout Session (a cancelled booking must not take a deposit). */
+  expireCheckout?: (sessionId: string) => Promise<void>;
   /** Background work (emails, calendar retries). Tests await it; the server lets it run. */
   background?: (p: Promise<unknown>) => void;
 }
@@ -181,14 +185,54 @@ function resolveStaff(d: Deps, given: string | undefined, service: Service): Sta
   return st;
 }
 
-/** Calendar blocks typed in by a person. If Google is unreachable, the booking still works from the database. */
+/** Resolves to `fallback` after `ms` if `work` has not settled (work keeps running). */
+function within<T, F>(work: Promise<T>, ms: number, fallback: F): Promise<T | F> {
+  let timer: NodeJS.Timeout | undefined;
+  return Promise.race([work, new Promise<F>((res) => { timer = setTimeout(() => res(fallback), ms); timer.unref?.(); })]).finally(() => clearTimeout(timer));
+}
+
+/** The voice platform waits about 12 s for a tool; the calendar steps together must stay well under that. */
+export const CALENDAR_BUSY_BUDGET_MS = 3000;
+export const CALENDAR_WRITE_BUDGET_MS = 2500;
+
+/** Calendar blocks typed in by a person. If Google is unreachable or slow, the booking still works from the database. */
 async function busyAround(d: Deps, fromUtc: number, toUtc: number): Promise<{ busy: Busy; calendarOk: boolean }> {
+  const TIMEOUT = Symbol("timeout");
   try {
-    return { busy: await d.calendar.externalBusy(fromUtc, toUtc), calendarOk: true };
+    const r = await within(d.calendar.externalBusy(fromUtc, toUtc), d.calendarBudgetMs?.busy ?? CALENDAR_BUSY_BUDGET_MS, TIMEOUT);
+    if (r === TIMEOUT) {
+      d.log?.("calendar busy check timed out; using bookings from the database only");
+      return { busy: [], calendarOk: false };
+    }
+    return { busy: r, calendarOk: true };
   } catch (err) {
     d.log?.(`calendar busy check failed: ${err instanceof Error ? err.message : String(err)}`);
     return { busy: [], calendarOk: false };
   }
+}
+
+/** Busy blocks for the week after a wanted time, so suggested alternatives respect the real calendar too. */
+const busyForBooking = (d: Deps, startUtc: number) => busyAround(d, startUtc - 86_400_000, startUtc + 8 * 86_400_000);
+
+const lettersOnly = (s: string): string => s.toLowerCase().replace(/[^\p{L}]/gu, "");
+
+/** "Ann Lee" and "Anne Lee" (the agent re-sending after the caller spelled it) are the same person. */
+export function sameName(a: string, b: string): boolean {
+  const x = lettersOnly(a);
+  const y = lettersOnly(b);
+  if (x === y) return true;
+  const fa = lettersOnly(a.trim().split(/\s+/)[0] ?? "");
+  const fb = lettersOnly(b.trim().split(/\s+/)[0] ?? "");
+  if (fa.length >= 2 && fa === fb) return true;
+  // Levenshtein distance up to 2
+  if (Math.abs(x.length - y.length) > 2) return false;
+  let prev = Array.from({ length: y.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= x.length; i += 1) {
+    const cur = [i];
+    for (let j = 1; j <= y.length; j += 1) cur[j] = Math.min((prev[j] as number) + 1, (cur[j - 1] as number) + 1, (prev[j - 1] as number) + (x[i - 1] === y[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return (prev[y.length] as number) <= 2;
 }
 
 function slotProblem(d: Deps, check: Extract<SlotCheck, { ok: false }>, service: Service, startUtc: number, staff: StaffMember | undefined, nowMs: number, busy: Busy, ignoreId?: string): SpokenError {
@@ -279,7 +323,9 @@ export function payUrl(d: Deps, a: Appointment): string {
 
 // ---------------------------------------------------------------- emails to the caller
 
-export function appointmentEmail(d: Deps, a: Appointment, kind: "booked" | "rescheduled" | "cancelled" | "deposit_paid"): { subject: string; text: string; html: string } {
+export type EmailKind = "booked" | "rescheduled" | "cancelled" | "deposit_paid" | "deposit_after_cancel";
+
+export function appointmentEmail(d: Deps, a: Appointment, kind: EmailKind): { subject: string; text: string; html: string } {
   const b = d.b;
   const sv = serviceOf(d, a.serviceId);
   const st = staffOf(d, a.staffId);
@@ -290,12 +336,14 @@ export function appointmentEmail(d: Deps, a: Appointment, kind: "booked" | "resc
     rescheduled: `${b.name}: your ${b.agent.visitWord} moved to ${when}`,
     cancelled: `${b.name}: your ${b.agent.visitWord} is cancelled`,
     deposit_paid: `${b.name}: deposit received`,
+    deposit_after_cancel: `${b.name}: deposit received for a cancelled ${b.agent.visitWord}`,
   }[kind];
   const head = {
     booked: `Hi ${a.customerName}, you are booked.`,
     rescheduled: `Hi ${a.customerName}, your ${b.agent.visitWord} has been moved.`,
     cancelled: `Hi ${a.customerName}, your ${b.agent.visitWord} has been cancelled.${a.lateCancellation ? ` It was inside the ${b.policies.cancellationNoticeHours}-hour notice window, so a late fee of ${usd(b.policies.lateCancelFeeUsd)} may apply.` : ""}`,
     deposit_paid: `Hi ${a.customerName}, we received your ${usd(a.depositUsd)} deposit. Your time is held.`,
+    deposit_after_cancel: `Hi ${a.customerName}, we received a ${usd(a.depositUsd)} deposit for a ${b.agent.visitWord} that was already cancelled. The team will refund it; you do not need to do anything.`,
   }[kind];
   const lines: [string, string][] = [
     ["What", sv.name],
@@ -304,10 +352,10 @@ export function appointmentEmail(d: Deps, a: Appointment, kind: "booked" | "resc
     ["Where", a.address ?? b.address],
     ["Code", a.code],
   ];
-  const depositDue = kind !== "cancelled" && a.depositStatus === "due" && d.depositsEnabled;
+  const depositDue = (kind === "booked" || kind === "rescheduled") && a.depositStatus === "due" && d.depositsEnabled;
   const link = depositDue ? payUrl(d, a) : null;
   const depositText = link ? `To hold this time, please pay the ${usd(a.depositUsd)} deposit: ${link}` : "";
-  const change = kind === "cancelled" ? "" : `To change or cancel, call us and give your code ${a.code}.`;
+  const change = kind === "cancelled" || kind === "deposit_after_cancel" ? "" : `To change or cancel, call us and give your code ${a.code}.`;
   const text = [head, "", ...lines.map(([k, v]) => `${k}: ${v}`), "", depositText, change, "", demo].filter((l, i, arr) => l !== "" || arr[i - 1] !== "").join("\n").trim();
   const color = /^#[0-9a-fA-F]{6}$/.test(b.brand.color) ? b.brand.color : "#0f766e";
   const html = `<!doctype html><html><body style="margin:0;background:#f6f7f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111">
@@ -323,10 +371,11 @@ ${demo ? `<p style="font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;pa
   return { subject, text, html };
 }
 
-function emailCaller(d: Deps, a: Appointment, kind: "booked" | "rescheduled" | "cancelled" | "deposit_paid", call: ToolCall): void {
+function emailCaller(d: Deps, a: Appointment, kind: EmailKind, call: ToolCall): void {
   if (!a.email) return;
   const m = appointmentEmail(d, a, kind);
-  const key = `${a.id}:${kind}:${kind === "rescheduled" ? a.startUtc : ""}`;
+  // The address is part of the key: a corrected address gets its own email.
+  const key = `${a.id}:${kind}:${kind === "rescheduled" ? a.startUtc : ""}:${a.email}`;
   bg(
     d,
     sendOnce(d.db, d.email, { to: a.email, subject: m.subject, text: m.text, html: m.html, idempotencyKey: key, ...(d.replyTo ? { replyTo: d.replyTo } : {}) }, call.nowMs).then(
@@ -396,13 +445,14 @@ async function getAvailability(d: Deps, args: Record<string, unknown>, call: Too
   if (compareYmd(to, from) < 0) return fail("bad_range", "The end of that range is before the start. Which days should I look at?", { field: "date_to" });
   if (daysBetween(from, to) + 1 > b.scheduling.maxRangeDays) to = addDays(from, b.scheduling.maxRangeDays - 1);
 
-  const { busy, calendarOk } = await busyAround(d, Date.UTC(from.y, from.m - 1, from.d) - 86_400_000, Date.UTC(to.y, to.m - 1, to.d) + 2 * 86_400_000);
+  // Busy blocks for exactly the local days searched (local midnight to local midnight, in the business's zone).
+  const { busy, calendarOk } = await busyAround(d, instantOf(b, from, 0), instantOf(b, addDays(to, 1), 0));
   let slots = findSlots(b, d.db, { from, to, service, staffId: staff?.id, partOfDay, nowMs: call.nowMs, busy });
   let widened = false;
   if (slots.length === 0 && !toIn.value) {
     // Nothing in the window asked for: look two more weeks before saying no.
     const to2 = addDays(to, 14);
-    const extra = await busyAround(d, Date.UTC(to.y, to.m - 1, to.d), Date.UTC(to2.y, to2.m - 1, to2.d) + 86_400_000);
+    const extra = await busyAround(d, instantOf(b, addDays(to, 1), 0), instantOf(b, addDays(to2, 1), 0));
     slots = findSlots(b, d.db, { from: addDays(to, 1), to: to2, service, staffId: staff?.id, partOfDay, nowMs: call.nowMs, busy: [...busy, ...extra.busy] });
     widened = true;
   }
@@ -478,21 +528,43 @@ async function bookAppointment(d: Deps, args: Record<string, unknown>, call: Too
   const startUtc = startIn.value as number;
   const name = nameIn.value as string;
 
-  // Idempotent: the same call asking again for the same booking gets the same appointment.
-  const again = d.db.appointmentsForCall(call.callId).find((a) => a.status === "booked" && a.startUtc === startUtc && a.serviceId === service.id && a.customerName.toLowerCase() === name.toLowerCase());
-  if (again) {
-    if (email && !again.email) {
-      again.email = email;
-      d.db.saveAppointment(again);
-      emailCaller(d, again, "booked", call);
+  // Idempotent: the same call asking again for the same booking (same time and service, same person even if the
+  // name was re-spelled) gets the same appointment. Checked again after the calendar wait, because two identical
+  // requests can both be waiting at once.
+  const callId = call.callId;
+  const repeat = (): ToolOutput | null => {
+    const again = d.db.appointmentsForCall(callId).find((a) => a.status === "booked" && a.startUtc === startUtc && a.serviceId === service.id && sameName(a.customerName, name));
+    if (!again) return null;
+    let changed = false;
+    if (again.customerName !== name) {
+      again.customerName = name;
+      changed = true;
     }
-    const out: ToolOutput = { ok: true, already_booked: true, appointment: appointmentView(d, again), message: `You are already booked for ${spokenDateTime(again.startUtc, b.timezone)}. Your code is ${spellCode(again.code)}.` };
-    log(d, call, "book_appointment", out, `Repeat request; same appointment ${again.code}.`, { appointmentId: again.id });
+    const newEmail = email !== undefined && email !== again.email;
+    if (newEmail) {
+      again.email = email;
+      changed = true;
+    }
+    if (changed) {
+      again.updatedAtMs = call.nowMs;
+      d.db.saveAppointment(again);
+      bg(d, syncCalendar(d, again));
+    }
+    if (newEmail) emailCaller(d, again, "booked", call);
+    const out: ToolOutput = {
+      ok: true, already_booked: true, appointment: appointmentView(d, again),
+      message: `You are booked for ${spokenDateTime(again.startUtc, b.timezone)}. Your code is ${spellCode(again.code)}.${newEmail ? ` I am sending the details to ${email}.` : ""}`,
+    };
+    log(d, call, "book_appointment", out, `Repeat request; same appointment ${again.code}${changed ? " (details updated)" : ""}.`, { appointmentId: again.id });
     return out;
-  }
+  };
+  const first = repeat();
+  if (first) return first;
 
-  const { busy } = await busyAround(d, startUtc - 86_400_000, startUtc + 86_400_000);
+  const { busy } = await busyForBooking(d, startUtc);
   // From here to saveAppointment everything is synchronous: no other request can interleave.
+  const second = repeat();
+  if (second) return second;
   const check = checkSlot(b, d.db, { startUtc, service, staffId: staff?.id, nowMs: call.nowMs, busy });
   if (!check.ok) {
     const out = slotProblem(d, check, service, startUtc, staff, call.nowMs, busy);
@@ -516,13 +588,17 @@ async function bookAppointment(d: Deps, args: Record<string, unknown>, call: Too
     }
     throw err;
   }
-  const calendarOk = await syncCalendar(d, a);
+  // The calendar write gets a short budget; if Google is slow it finishes in the background.
+  const sync = syncCalendar(d, a);
+  bg(d, sync);
+  const synced = await within(sync, d.calendarBudgetMs?.write ?? CALENDAR_WRITE_BUDGET_MS, "pending" as const);
+  const calendarOk = synced !== false;
   emailCaller(d, a, "booked", call);
   const when = spokenDateTime(startUtc, b.timezone);
   const parts = [`You are booked for ${service.name.toLowerCase()} on ${when} with ${check.staff.short}.`, `Your confirmation code is ${spellCode(a.code)}.`];
   if (email) parts.push(`I am sending the details to ${email}${deposit > 0 ? `, with a link to pay the ${usd(deposit)} deposit that holds your time` : ""}.`);
   else if (deposit > 0) parts.push(`There is a ${usd(deposit)} deposit to hold the time; with an email address I can send you the payment link.`);
-  const out: ToolOutput = { ok: true, appointment: appointmentView(d, a), calendar: calendarOk ? "synced" : "failed", email_queued: Boolean(email), message: parts.join(" ") };
+  const out: ToolOutput = { ok: true, appointment: appointmentView(d, a), calendar: synced === true ? "synced" : synced === "pending" ? "pending" : "failed", email_queued: Boolean(email), message: parts.join(" ") };
   log(d, call, "book_appointment", out, `Booked ${service.name} ${when} with ${check.staff.short} for ${name}, code ${a.code}${calendarOk ? "" : " (CALENDAR SYNC FAILED: add it by hand)"}.`, { appointmentId: a.id });
   return out;
 }
@@ -539,8 +615,17 @@ function findTarget(d: Deps, args: Record<string, unknown>, call: ToolCall, verb
   const phoneIn = readPhone(args, "phone");
   if (isFailure(phoneIn)) return phoneIn;
   const fromCaller = call.fromNumber ? readPhone({ p: call.fromNumber }, "p") : undefined;
-  const phone = phoneIn.value ?? (fromCaller && !isFailure(fromCaller) ? fromCaller.value : undefined);
-  if (!phone) return fail("missing_fields", `Which ${b.agent.visitWord} should I ${verb}? Your confirmation code or the phone number it was booked under is enough.`, { hint: "send code, or phone" });
+  const callerId = fromCaller && !isFailure(fromCaller) ? fromCaller.value : undefined;
+  // Looking up by phone is only allowed for the number the caller is actually calling from. Anyone can say
+  // someone else's number; only the owner has the code from the confirmation email.
+  if (phoneIn.value !== undefined && phoneIn.value !== callerId) {
+    return fail("code_required", `For your privacy I need the four-character confirmation code from your email to ${verb} a booking made under a different number. Do you have it?`, {
+      field: "code",
+      hint: "phone lookup works only for the caller's own number; ask for the code",
+    });
+  }
+  const phone = callerId;
+  if (!phone) return fail("missing_fields", `Which ${b.agent.visitWord} should I ${verb}? Please read me the four-character confirmation code from your email.`, { hint: "send code" });
   const list = d.db.upcomingForPhone(phone, call.nowMs);
   if (list.length === 0) return fail("not_found", `I do not see an upcoming ${b.agent.visitWord} under ${formatPhone(phone)}. Was it booked under another number, or do you have the confirmation code?`, { field: "phone" });
   const curIn = readStart(args, "current_start", b.timezone, "the current appointment");
@@ -570,23 +655,38 @@ async function rescheduleAppointment(d: Deps, args: Record<string, unknown>, cal
     log(d, call, "reschedule_appointment", out, `Reschedule to the same time; nothing changed (${a.code}).`, { appointmentId: a.id });
     return out;
   }
-  const { busy } = await busyAround(d, newStart - 86_400_000, newStart + 86_400_000);
-  const check = checkSlot(b, d.db, { startUtc: newStart, service, preferStaffId: a.staffId, nowMs: call.nowMs, busy, ignoreAppointmentId: a.id });
+  const { busy } = await busyForBooking(d, newStart);
+  // Read the row again after the wait: a cancel, a deposit payment or another move may have happened meanwhile.
+  const fresh = d.db.getAppointment(target.id);
+  if (!fresh || fresh.status === "cancelled") return fail("already_cancelled", `That ${b.agent.visitWord} was cancelled. Would you like to book a new one?`);
+  const a2 = fresh;
+  if (a2.startUtc === newStart) {
+    return { ok: true, unchanged: true, appointment: appointmentView(d, a2), message: `You are booked for ${spokenDateTime(a2.startUtc, b.timezone)}.` };
+  }
+  const check = checkSlot(b, d.db, { startUtc: newStart, service, preferStaffId: a2.staffId, nowMs: call.nowMs, busy, ignoreAppointmentId: a2.id });
   if (!check.ok) {
-    const out = slotProblem(d, check, service, newStart, undefined, call.nowMs, busy, a.id);
-    log(d, call, "reschedule_appointment", out as ToolOutput, `Reschedule refused: ${out.error}.`, { appointmentId: a.id });
+    const out = slotProblem(d, check, service, newStart, undefined, call.nowMs, busy, a2.id);
+    log(d, call, "reschedule_appointment", out as ToolOutput, `Reschedule refused: ${out.error}.`, { appointmentId: a2.id });
     return out as ToolOutput;
   }
-  const from = { start: a.startUtc, staff: a.staffId };
-  a.history.push({ atMs: call.nowMs, callId: call.callId, action: "rescheduled", fromStartUtc: from.start, fromStaffId: from.staff });
-  Object.assign(a, { startUtc: newStart, endUtc: check.endUtc, staffId: check.staff.id, updatedAtMs: call.nowMs });
+  const from = { start: a2.startUtc, staff: a2.staffId };
+  a2.history.push({ atMs: call.nowMs, callId: call.callId, action: "rescheduled", fromStartUtc: from.start, fromStaffId: from.staff });
+  Object.assign(a2, { startUtc: newStart, endUtc: check.endUtc, staffId: check.staff.id, updatedAtMs: call.nowMs });
+  return finishReschedule(d, a2, from, check.staff, service, newStart, busy, call);
+}
+
+async function finishReschedule(d: Deps, a: Appointment, from: { start: number; staff: string }, staff: StaffMember, service: Service, newStart: number, busy: Busy, call: ToolCall): Promise<ToolOutput> {
+  const b = d.b;
+  const check = { staff };
   try {
     d.db.saveAppointment(a);
   } catch (err) {
     if (String(err).includes("UNIQUE")) return slotProblem(d, { ok: false, code: "slot_taken" }, service, newStart, undefined, call.nowMs, busy, a.id) as ToolOutput;
     throw err;
   }
-  const calendarOk = await syncCalendar(d, a);
+  const sync = syncCalendar(d, a);
+  bg(d, sync);
+  const calendarOk = (await within(sync, d.calendarBudgetMs?.write ?? CALENDAR_WRITE_BUDGET_MS, "pending" as const)) !== false;
   emailCaller(d, a, "rescheduled", call);
   const out: ToolOutput = {
     ok: true, appointment: appointmentView(d, a), calendar: calendarOk ? "synced" : "failed",
@@ -613,7 +713,16 @@ async function cancelAppointment(d: Deps, args: Record<string, unknown>, call: T
   a.updatedAtMs = call.nowMs;
   a.history.push({ atMs: call.nowMs, callId: call.callId, action: "cancelled" });
   d.db.saveAppointment(a);
-  const calendarOk = await syncCalendar(d, a);
+  if (a.depositStatus === "due" && a.stripeSessionId && d.expireCheckout) {
+    const sid = a.stripeSessionId;
+    bg(d, d.expireCheckout(sid).catch((err: unknown) => {
+      // An already-expired or completed session cannot be expired; the webhook handles a late payment.
+      d.log?.(`could not expire checkout for ${a.id}: ${err instanceof Error ? err.message : String(err)}`);
+    }));
+  }
+  const sync = syncCalendar(d, a);
+  bg(d, sync);
+  const calendarOk = (await within(sync, d.calendarBudgetMs?.write ?? CALENDAR_WRITE_BUDGET_MS, "pending" as const)) !== false;
   emailCaller(d, a, "cancelled", call);
   const fee = late && b.policies.lateCancelFeeUsd > 0 ? ` Because it is less than ${b.policies.cancellationNoticeHours} hours away, a late fee of ${usd(b.policies.lateCancelFeeUsd)} may apply; the team will confirm.` : "";
   const deposit = a.depositStatus === "paid" ? " The team will be in touch about your deposit." : "";
