@@ -3,6 +3,7 @@
 //   POST /tools/<name>               Retell custom function, X-Retell-Signature over the raw body
 //   POST /webhooks/retell            call_ended / call_analyzed, signed the same way
 //   POST /webhooks/retell-inbound    call_inbound: rejects calls past the daily cap (bill protection)
+//   POST /vapi                       Vapi: tool-calls and end-of-call-report, shared secret header (or ?token=)
 //   POST /webhooks/stripe            checkout.session.completed, Stripe-Signature
 //   GET  /pay/<token>                creates or reuses a Stripe test-mode Checkout Session and redirects to it
 //   GET  /pay/done, /pay/cancelled   plain pages after Checkout
@@ -12,20 +13,24 @@ import type { Business } from "./business.ts";
 import type { Calendar } from "./calendar.ts";
 import type { Db } from "./db.ts";
 import { escapeHtml, sendOnce, type EmailSender } from "./email.ts";
-import { handleRetellWebhook } from "./postcall.ts";
+import { CALL_ID, handleRetellWebhook } from "./postcall.ts";
 import { DEFAULT_TOLERANCE_MS, ReplayGuard, verifyRetellSignature } from "./signature.ts";
 import { readPayToken, verifyStripeSignature, type StripeClient } from "./stripe.ts";
 import { appointmentEmail, eventForAppointment, isToolName, runTool, type Deps } from "./tools.ts";
 import { usd } from "./text.ts";
 import { localYmd, spokenDateTime, zonedToUtc } from "./time.ts";
 import { isRecord } from "./validate.ts";
+import { endOfCallAsRetell, readToolCalls, sameSecret, VAPI_TOKEN_HEADER, vapiCallInfo } from "./vapi.ts";
 
 export interface AppConfig {
   b: Business;
   db: Db;
   calendar: Calendar;
   email: EmailSender;
-  retellApiKey: string;
+  /** Retell's API key (signs Retell's requests). Optional when only Vapi is used. */
+  retellApiKey?: string | undefined;
+  /** Shared secret Vapi sends on every request (VAPI_SERVER_SECRET). Enables POST /vapi. */
+  vapiSecret?: string | undefined;
   publicBaseUrl: string;
   linkSecret: string;
   stripe?: { client: StripeClient; webhookSecret: string } | undefined;
@@ -87,7 +92,10 @@ export interface App {
 }
 
 export function createApp(c: AppConfig): App {
-  if (!c.retellApiKey || c.retellApiKey.length < 8) throw new Error("RETELL_API_KEY is required (8+ characters)");
+  const retellKey = c.retellApiKey && c.retellApiKey.length >= 8 ? c.retellApiKey : undefined;
+  const vapiSecret = c.vapiSecret && c.vapiSecret.length >= 24 ? c.vapiSecret : undefined;
+  if (c.vapiSecret && !vapiSecret) throw new Error("VAPI_SERVER_SECRET must be 24+ characters");
+  if (!retellKey && !vapiSecret) throw new Error("RETELL_API_KEY or VAPI_SERVER_SECRET is required");
   if (!c.linkSecret || c.linkSecret.length < 16) throw new Error("LINK_SECRET is required (16+ characters)");
   const clock = c.clock ?? Date.now;
   const log = c.log ?? (() => {});
@@ -105,7 +113,8 @@ export function createApp(c: AppConfig): App {
   const guard = new ReplayGuard({ toleranceMs: DEFAULT_TOLERANCE_MS });
 
   function verifyRetell(req: Req): { ok: true; digest: string } | { ok: false; res: Res } {
-    const check = verifyRetellSignature(req.body, header(req, "x-retell-signature"), c.retellApiKey, clock());
+    if (!retellKey) return { ok: false, res: json(404, { error: "not_found" }) };
+    const check = verifyRetellSignature(req.body, header(req, "x-retell-signature"), retellKey, clock());
     if (!check.ok) return { ok: false, res: json(401, { error: "unauthorized", reason: check.reason }) };
     return { ok: true, digest: check.digest };
   }
@@ -171,6 +180,38 @@ export function createApp(c: AppConfig): App {
       timers.add(t);
     }
     return json(r.status, r.body);
+  }
+
+  async function vapi(req: Req): Promise<Res> {
+    if (!vapiSecret) return json(404, { error: "not_found" });
+    const bearer = header(req, "authorization")?.replace(/^Bearer\s+/i, "");
+    const query = new URLSearchParams(req.url.split("?")[1] ?? "").get("token") ?? undefined;
+    const given = [header(req, VAPI_TOKEN_HEADER), header(req, "x-vapi-secret"), bearer, query].find((x) => sameSecret(x, vapiSecret));
+    if (!given) return json(401, { error: "unauthorized" });
+    const body = parse(req);
+    const message = isRecord(body) && isRecord(body["message"]) ? body["message"] : undefined;
+    if (!message || typeof message["type"] !== "string") return json(400, { error: "invalid_payload" });
+    const info = vapiCallInfo(message);
+    const callId = info.callId && CALL_ID.test(info.callId) ? info.callId : undefined;
+    if (message["type"] === "tool-calls") {
+      const results: { toolCallId: string; result: string }[] = [];
+      // One at a time and in order: a booking and its follow-up in the same turn must not race each other.
+      for (const tc of readToolCalls(message)) {
+        if (!isToolName(tc.name)) {
+          results.push({ toolCallId: tc.id, result: JSON.stringify({ ok: false, error: "unknown_tool", message: "Sorry, I can't do that here." }) });
+          continue;
+        }
+        const out = await runTool(deps, tc.name, tc.args, { nowMs: clock(), callId, fromNumber: info.fromNumber });
+        results.push({ toolCallId: tc.id, result: JSON.stringify(out) });
+      }
+      return json(200, { results });
+    }
+    if (message["type"] === "end-of-call-report") {
+      if (!callId) return json(400, { error: "missing_call_id" });
+      const r = await handleRetellWebhook(endOfCallAsRetell(message), postCallDeps());
+      return json(r.status, r.body);
+    }
+    return json(200, { status: "ignored", type: message["type"] });
   }
 
   function inbound(req: Req): Res {
@@ -334,6 +375,7 @@ export function createApp(c: AppConfig): App {
     if (path === "/webhooks/retell") return retellWebhook(req);
     if (path === "/webhooks/retell-inbound") return inbound(req);
     if (path === "/webhooks/stripe") return stripeWebhook(req);
+    if (path === "/vapi") return vapi(req);
     return json(404, { error: "not_found" });
   }
 

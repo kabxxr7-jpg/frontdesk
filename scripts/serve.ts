@@ -50,7 +50,8 @@ const n8n = n8nUrl && n8nSecret ? { url: n8nUrl, secret: n8nSecret } : undefined
 
 const app = createApp({
   b, db, calendar, email, stripe, n8n,
-  retellApiKey: need("RETELL_API_KEY"),
+  retellApiKey: env("RETELL_API_KEY"),
+  vapiSecret: env("VAPI_SERVER_SECRET"),
   publicBaseUrl: need("PUBLIC_BASE_URL"),
   linkSecret: need("LINK_SECRET"),
   teamEmail: env("TEAM_EMAIL"),
@@ -63,7 +64,7 @@ const port = Number(env("PORT") ?? "8080");
 const host = env("HOST") ?? "127.0.0.1";
 server.listen(port, host, () => {
   console.log(
-    `frontdesk for ${b.name} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"}`,
+    `frontdesk for ${b.name} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"} | voice: ${[env("RETELL_API_KEY") ? "retell" : "", env("VAPI_SERVER_SECRET") ? "vapi" : ""].filter(Boolean).join("+")}`,
   );
 });
 for (const sig of ["SIGINT", "SIGTERM"] as const) {

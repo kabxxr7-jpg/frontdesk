@@ -69,18 +69,28 @@ export const TOOL_DEFS: { name: string; description: string; parameters: Record<
   },
 ];
 
-export function buildPrompt(b: Business): string {
-  const tz = b.timezone;
+/** How the voice platform fills in the time and the caller's number (Retell by default). */
+export interface PromptVars {
+  now: string;
+  calendar: string;
+  caller: string;
+}
+
+export function retellVars(tz: string): PromptVars {
+  return { now: `{{current_time_${tz}}}`, calendar: `Next two weeks: {{current_calendar_${tz}}}`, caller: "{{user_number}}" };
+}
+
+export function buildPrompt(b: Business, vars: PromptVars = retellVars(b.timezone)): string {
   const services = b.services.map((s) => `- ${renderServiceLine(s)}`).join("\n");
   const staff = b.staff.map((s) => `- ${s.name}, ${s.title}`).join("\n");
   const cw = b.agent.customerWord;
   return `You are ${b.agent.name}, the phone receptionist for ${b.name}, a ${b.vertical}${b.fictional ? " (a fictional business used as a live demonstration; if asked, say so honestly)" : ""}.
 
 ## Facts
-- Now: {{current_time_${tz}}}. Next two weeks: {{current_calendar_${tz}}}
+- Now: ${vars.now}. ${vars.calendar}
 - Address: ${b.address}${b.serviceArea ? `. Service area: ${b.serviceArea}` : ""}
 - ${renderHours(b)}
-- Caller's number: {{user_number}} (empty on a web call; then ask for one).
+- Caller's number: ${vars.caller} (empty on a web call; then ask for one).
 - Services:
 ${services}
 - Team:
