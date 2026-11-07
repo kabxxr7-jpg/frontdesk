@@ -104,5 +104,6 @@ describe("Vapi adapter", () => {
     expect(a.model.tools.filter((t) => t.type === "function")).toHaveLength(6);
     expect(a.server.headers["x-frontdesk-token"]).toBe(SECRET);
     expect(a.maxDurationSeconds).toBe(300);
+    expect(a.artifactPlan.recordingEnabled).toBe(false);
   });
 });

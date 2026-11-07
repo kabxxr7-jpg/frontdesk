@@ -63,6 +63,8 @@ export function buildVapiAssistant(b: Business, o: VapiOptions) {
     silenceTimeoutSeconds: 20,
     server,
     serverMessages: ["end-of-call-report"],
+    // No call audio is kept anywhere: the demo is the live line, and callers' voices are not stored.
+    artifactPlan: { recordingEnabled: false },
   };
 }
 
