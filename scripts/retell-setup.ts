@@ -79,7 +79,7 @@ if (attach) {
     process.exit(1);
   }
   await api("PATCH", `/update-phone-number/${encodeURIComponent(attach)}`, {
-    inbound_agents: [{ agent_id: agentId, weight: 1 }],
+    inbound_agents: [{ agent_id: agentId, agent_version: "latest", weight: 1 }],
     inbound_webhook_url: `${base}/webhooks/retell-inbound`,
     nickname: `frontdesk ${b.slug}`,
   });
