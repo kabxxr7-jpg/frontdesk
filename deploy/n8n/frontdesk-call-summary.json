@@ -1,0 +1,307 @@
+{
+  "name": "Front desk: call summary to HubSpot, team email, GoHighLevel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "frontdesk-call",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Call summary in",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "call-summary-in",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Frontdesk token"
+        }
+      },
+      "webhookId": "frontdesk-call"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// One item in: { event, summary, email }. Out: the fields the CRM, team email and GoHighLevel steps need.\nconst { summary: s, email } = $input.first().json.body;\nconst name = (s.customer.name || '').trim();\nconst [firstname, ...rest] = name ? name.split(/\\s+/) : ['Caller'];\nconst lines = [\n  `${s.business.name}${s.business.fictional ? ' (demo)' : ''}: ${s.outcome.replace(/_/g, ' ')}${s.urgency !== 'routine' ? ` [${s.urgency.toUpperCase()}]` : ''}`,\n  ...s.appointments.map(a => `${a.code} ${a.service}, ${a.spoken}, ${a.staff}, ${a.status}${a.deposit_usd ? `, deposit $${a.deposit_usd} ${a.deposit_status}` : ''}`),\n  ...(s.problems.length ? ['PROBLEMS: ' + s.problems.join(' | ')] : []),\n  `Summary: ${s.platform_summary || '-'}`,\n  `Call ${s.call_id}, ${s.duration_seconds ?? '?'} s`,\n];\nreturn [{ json: {\n  call_id: s.call_id,\n  email: s.customer.email || '',\n  phone: s.customer.phone || s.from_number || '',\n  firstname, lastname: rest.join(' '),\n  note: lines.join('\\n'),\n  team_subject: email.subject,\n  team_text: email.text,\n  urgency: s.urgency,\n  outcome: s.outcome,\n  appointments: s.appointments,\n  business: s.business.name,\n}}];\n"
+      },
+      "name": "Shape for CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "id": "shape-for-crm"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Has email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        200
+      ],
+      "id": "has-email"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ inputs: [{ idProperty: 'email', id: $json.email, properties: { email: $json.email, phone: $json.phone, firstname: $json.firstname, lastname: $json.lastname, lifecyclestage: 'lead' } }] }) }}",
+        "options": {}
+      },
+      "name": "HubSpot upsert by email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        120
+      ],
+      "id": "hubspot-upsert-by-email",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "HubSpot private app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { phone: $json.phone, firstname: $json.firstname, lastname: $json.lastname, lifecyclestage: 'lead' } }) }}",
+        "options": {}
+      },
+      "name": "HubSpot create by phone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        280
+      ],
+      "id": "hubspot-create-by-phone",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "HubSpot private app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst id = r.results ? r.results[0].id : r.id;\nreturn [{ json: { ...$('Shape for CRM').first().json, contact_id: id } }];"
+      },
+      "name": "Contact id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ],
+      "id": "contact-id"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { hs_timestamp: new Date().toISOString(), hs_note_body: $json.note.split('\\n').join('<br>') }, associations: [{ to: { id: $json.contact_id }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] }] }) }}",
+        "options": {}
+      },
+      "name": "HubSpot note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        200
+      ],
+      "id": "hubspot-note",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "HubSpot private app"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ 'n8n-team-' + $json.call_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $env.EMAIL_FROM || 'Front Desk Demo <onboarding@resend.dev>', to: [$env.TEAM_EMAIL], subject: $json.team_subject, text: $json.team_text }) }}",
+        "options": {}
+      },
+      "name": "Team email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        440
+      ],
+      "id": "team-email",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Resend API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GHL_INBOUND_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'ai-front-desk', first_name: $json.firstname, last_name: $json.lastname, email: $json.email, phone: $json.phone, outcome: $json.outcome, urgency: $json.urgency, note: $json.note, appointment_start: ($json.appointments[0] || {}).start || '', appointment_service: ($json.appointments[0] || {}).service || '' }) }}",
+        "options": {}
+      },
+      "name": "GoHighLevel inbound webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        600
+      ],
+      "id": "gohighlevel-inbound-webhook",
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Call summary in": {
+      "main": [
+        [
+          {
+            "node": "Shape for CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape for CRM": {
+      "main": [
+        [
+          {
+            "node": "Has email?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Team email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GoHighLevel inbound webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has email?": {
+      "main": [
+        [
+          {
+            "node": "HubSpot upsert by email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HubSpot create by phone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot upsert by email": {
+      "main": [
+        [
+          {
+            "node": "Contact id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot create by phone": {
+      "main": [
+        [
+          {
+            "node": "Contact id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact id": {
+      "main": [
+        [
+          {
+            "node": "HubSpot note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
