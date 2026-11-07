@@ -57,9 +57,9 @@ await run("stripe", async () => {
 await run("retell", async () => {
   const key = env("RETELL_API_KEY");
   if (!key) throw new Error("RETELL_API_KEY needed");
-  const res = await fetch("https://api.retellai.com/list-agents", { headers: { authorization: `Bearer ${key}` } });
+  const res = await fetch("https://api.retellai.com/v2/list-agents", { method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" }, body: "{}" });
   if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
-  const list = (await res.json()) as unknown[];
+  const list = ((await res.json()) as { items?: unknown[] }).items ?? [];
   const nums = await fetch("https://api.retellai.com/list-phone-numbers", { headers: { authorization: `Bearer ${key}` } });
   const n = nums.ok ? ((await nums.json()) as { phone_number?: string }[]) : [];
   return `key works; ${list.length} agent versions; numbers: ${n.map((x) => x.phone_number).join(", ") || "none yet"}`;
