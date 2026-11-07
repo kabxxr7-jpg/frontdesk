@@ -1,0 +1,18 @@
+{
+  "agent_name": "frontdesk-brightside-family-dental",
+  "response_engine": {
+    "type": "retell-llm",
+    "llm_id": "FILLED_BY_RETELL_SETUP"
+  },
+  "voice_id": "retell-Cimo",
+  "language": "en-US",
+  "webhook_url": "https://REPLACE-WITH-PUBLIC-BASE-URL/webhooks/retell",
+  "webhook_events": [
+    "call_started",
+    "call_ended",
+    "call_analyzed"
+  ],
+  "max_call_duration_ms": 300000,
+  "end_call_after_silence_ms": 20000,
+  "data_storage_setting": "everything"
+}

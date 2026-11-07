@@ -1,0 +1,32 @@
+{
+	email {$ACME_EMAIL}
+}
+
+(security) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+{$DOMAIN} {
+	import security
+	header Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self'; img-src 'self' data:"
+	root * /srv/site
+	file_server
+}
+
+desk.{$DOMAIN} {
+	import security
+	request_body {
+		max_size 1MB
+	}
+	reverse_proxy app:8080
+}
+
+n8n.{$DOMAIN} {
+	import security
+	reverse_proxy n8n:5678
+}

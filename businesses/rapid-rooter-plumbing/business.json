@@ -1,0 +1,414 @@
+{
+  "slug": "rapid-rooter-plumbing",
+  "name": "Rapid Rooter Plumbing",
+  "vertical": "plumbing company",
+  "fictional": true,
+  "fictionNote": "Rapid Rooter Plumbing is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented.",
+  "timezone": "America/Chicago",
+  "address": "88 Example Road, Austin, Texas",
+  "serviceArea": "Austin, Round Rock, Pflugerville and Cedar Park",
+  "phones": {
+    "frontDesk": "+15125550100",
+    "emergency": {
+      "name": "our on-call plumber",
+      "phone": "+15125550199"
+    }
+  },
+  "agent": {
+    "name": "Max",
+    "customerWord": "customer",
+    "visitWord": "job",
+    "collectAddress": true
+  },
+  "scheduling": {
+    "slotMinutes": 30,
+    "minLeadMinutes": 120,
+    "maxRangeDays": 14,
+    "maxBookAheadDays": 90
+  },
+  "hours": {
+    "mon": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "tue": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "wed": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "thu": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "fri": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "sat": [
+      [
+        "08:00",
+        "13:00"
+      ]
+    ]
+  },
+  "closedDates": [],
+  "staff": [
+    {
+      "id": "marco-diaz",
+      "name": "Marco Diaz",
+      "short": "Marco",
+      "title": "master plumber",
+      "serviceIds": [
+        "leak_repair",
+        "water_heater_service",
+        "drain_cleaning",
+        "estimate"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "tue": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "wed": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "thu": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "fri": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "13:00"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "tessa-grant",
+      "name": "Tessa Grant",
+      "short": "Tessa",
+      "title": "plumber",
+      "serviceIds": [
+        "leak_repair",
+        "drain_cleaning",
+        "estimate"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "tue": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "wed": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "thu": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "fri": [
+          [
+            "07:00",
+            "18:00"
+          ]
+        ],
+        "sat": [
+          [
+            "08:00",
+            "13:00"
+          ]
+        ]
+      }
+    }
+  ],
+  "services": [
+    {
+      "id": "drain_cleaning",
+      "name": "Drain cleaning",
+      "description": "Clearing a slow or blocked sink, tub, shower or toilet drain.",
+      "durationMinutes": 60,
+      "priceUsd": 149,
+      "keywords": [
+        "drain cleaning",
+        "clog",
+        "clogged",
+        "blocked drain",
+        "slow drain",
+        "toilet clogged",
+        "drain"
+      ]
+    },
+    {
+      "id": "leak_repair",
+      "name": "Leak repair visit",
+      "description": "Finding and fixing a leaking pipe, faucet or toilet. Parts are extra.",
+      "durationMinutes": 90,
+      "priceUsd": 129,
+      "priceNote": "service call, parts extra",
+      "depositUsd": 39,
+      "keywords": [
+        "leak repair visit",
+        "leak",
+        "leaking",
+        "drip",
+        "dripping faucet",
+        "running toilet",
+        "pipe leak"
+      ]
+    },
+    {
+      "id": "water_heater_service",
+      "name": "Water heater service",
+      "description": "Diagnosis or repair of a tank or tankless water heater.",
+      "durationMinutes": 120,
+      "priceUsd": 189,
+      "priceNote": "diagnosis, repair quoted on site",
+      "depositUsd": 49,
+      "keywords": [
+        "water heater service",
+        "water heater",
+        "no hot water",
+        "tankless",
+        "hot water heater"
+      ]
+    },
+    {
+      "id": "estimate",
+      "name": "Free estimate",
+      "description": "A visit to quote a bigger job such as a repipe or a bathroom remodel.",
+      "durationMinutes": 60,
+      "priceUsd": 0,
+      "keywords": [
+        "free estimate",
+        "estimate",
+        "quote",
+        "repipe",
+        "remodel",
+        "bid"
+      ]
+    }
+  ],
+  "faq": [
+    {
+      "id": "hours",
+      "topic": "Hours",
+      "keywords": [
+        "hours",
+        "open",
+        "close",
+        "closing",
+        "opening",
+        "what time",
+        "when are you open",
+        "weekend",
+        "saturday",
+        "sunday"
+      ],
+      "answer": "{{hours}}"
+    },
+    {
+      "id": "services_prices",
+      "topic": "Services and prices",
+      "keywords": [
+        "services",
+        "prices",
+        "price list",
+        "how much",
+        "cost",
+        "what do you offer",
+        "what do you do"
+      ],
+      "answer": "We offer {{services}}."
+    },
+    {
+      "id": "licensed_and_insured",
+      "topic": "Licensed and insured",
+      "keywords": [
+        "licensed",
+        "insured",
+        "license",
+        "insurance"
+      ],
+      "answer": "Yes. Every plumber is licensed in Texas and the company is fully insured."
+    },
+    {
+      "id": "payment",
+      "topic": "Payment",
+      "keywords": [
+        "payment",
+        "pay",
+        "credit card",
+        "cash",
+        "financing"
+      ],
+      "answer": "We take cards and cash, and offer financing on jobs over a thousand dollars. Payment is due when the job is done."
+    },
+    {
+      "id": "warranty",
+      "topic": "Warranty",
+      "keywords": [
+        "warranty",
+        "guarantee",
+        "guaranteed"
+      ],
+      "answer": "Labour is guaranteed for one year; parts carry the maker's warranty."
+    },
+    {
+      "id": "arrival_window",
+      "topic": "Arrival window",
+      "keywords": [
+        "arrival",
+        "window",
+        "when will you arrive",
+        "on time",
+        "what time will"
+      ],
+      "answer": "The plumber arrives within the first thirty minutes of the booked time and calls when on the way."
+    },
+    {
+      "id": "service_area",
+      "topic": "Service area",
+      "keywords": [
+        "service area",
+        "do you come to",
+        "do you cover",
+        "areas",
+        "near me",
+        "travel"
+      ],
+      "answer": "We cover {{service_area}}."
+    }
+  ],
+  "policies": {
+    "cancellationNoticeHours": 4,
+    "lateCancelFeeUsd": 0
+  },
+  "urgent": {
+    "routeWhenOpen": "front_desk",
+    "rules": [
+      {
+        "id": "gas",
+        "phrases": [
+          "smell gas",
+          "gas smell",
+          "gas leak",
+          "smells like gas",
+          "smell of gas",
+          "rotten eggs"
+        ]
+      },
+      {
+        "id": "flooding",
+        "phrases": [
+          "burst pipe",
+          "pipe burst",
+          "pipe has burst",
+          "flooding",
+          "water everywhere",
+          "house is flooding",
+          "basement is flooding",
+          "water pouring",
+          "ceiling is leaking"
+        ]
+      },
+      {
+        "id": "sewage",
+        "phrases": [
+          "sewage backup",
+          "sewage coming up",
+          "sewer backup",
+          "raw sewage"
+        ]
+      },
+      {
+        "id": "no_water_heat",
+        "phrases": [
+          "water heater is leaking",
+          "water heater leaking",
+          "carbon monoxide"
+        ]
+      },
+      {
+        "id": "electrical_water",
+        "phrases": [
+          "water near the electrical",
+          "water in the panel",
+          "sparking"
+        ]
+      }
+    ],
+    "ambiguous": [
+      "leak",
+      "leaking",
+      "drip",
+      "dripping",
+      "clog",
+      "clogged",
+      "no hot water",
+      "backed up",
+      "overflow",
+      "overflowing",
+      "water heater",
+      "low pressure"
+    ],
+    "adviceWords": [
+      "is it safe",
+      "can i fix",
+      "how do i fix",
+      "diy",
+      "should i turn off",
+      "is it legal",
+      "permit"
+    ],
+    "emergencyMessage": "That sounds like an emergency. If you smell gas, leave the building now and call 911 or your gas company from outside. If water is pouring, turn off the main water valve if you can do it safely."
+  },
+  "brand": {
+    "color": "#1d4ed8",
+    "tagline": "Licensed plumbers across north Austin"
+  }
+}

@@ -1,0 +1,589 @@
+{
+  "slug": "brightside-family-dental",
+  "name": "Brightside Family Dental",
+  "vertical": "dental clinic",
+  "fictional": true,
+  "fictionNote": "Brightside Family Dental is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented.",
+  "timezone": "America/New_York",
+  "address": "1450 Example Avenue, Jersey City, New Jersey",
+  "phones": {
+    "frontDesk": "+12015550100",
+    "emergency": {
+      "name": "our after-hours on-call dentist",
+      "phone": "+12015550142"
+    }
+  },
+  "agent": {
+    "name": "Ava",
+    "customerWord": "patient",
+    "visitWord": "appointment",
+    "collectAddress": false
+  },
+  "scheduling": {
+    "slotMinutes": 30,
+    "minLeadMinutes": 60,
+    "maxRangeDays": 14,
+    "maxBookAheadDays": 90
+  },
+  "hours": {
+    "mon": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "tue": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "wed": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "thu": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "fri": [
+      [
+        "08:00",
+        "15:00"
+      ]
+    ],
+    "sat": [
+      [
+        "09:00",
+        "14:00"
+      ]
+    ]
+  },
+  "closedDates": [
+    {
+      "date": "2026-11-26",
+      "reason": "Thanksgiving"
+    },
+    {
+      "date": "2026-12-24",
+      "reason": "Christmas Eve"
+    },
+    {
+      "date": "2026-12-25",
+      "reason": "Christmas Day"
+    },
+    {
+      "date": "2027-01-01",
+      "reason": "New Year's Day"
+    }
+  ],
+  "staff": [
+    {
+      "id": "lena-chen",
+      "name": "Dr. Lena Chen",
+      "short": "Dr. Chen",
+      "title": "dentist",
+      "serviceIds": [
+        "new_patient_visit",
+        "emergency_exam",
+        "filling",
+        "whitening",
+        "aligner_consult"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "sat": [
+          [
+            "09:00",
+            "14:00"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "marcus-reyes",
+      "name": "Dr. Marcus Reyes",
+      "short": "Dr. Reyes",
+      "title": "dentist",
+      "serviceIds": [
+        "new_patient_visit",
+        "emergency_exam",
+        "filling",
+        "aligner_consult"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "09:00",
+            "17:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "thu": [
+          [
+            "09:00",
+            "17:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "09:00",
+            "14:00"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "jordan-patel",
+      "name": "Jordan Patel",
+      "short": "Jordan",
+      "title": "dental hygienist",
+      "serviceIds": [
+        "cleaning",
+        "new_patient_visit"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "17:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "17:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "17:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "09:00",
+            "14:00"
+          ]
+        ]
+      }
+    }
+  ],
+  "services": [
+    {
+      "id": "new_patient_visit",
+      "name": "New patient exam and cleaning",
+      "description": "A full exam, x-rays and a cleaning for first-time patients.",
+      "durationMinutes": 60,
+      "priceUsd": 189,
+      "depositUsd": 50,
+      "keywords": [
+        "new patient exam and cleaning",
+        "new patient",
+        "first visit",
+        "first time",
+        "new patient exam",
+        "exam and cleaning"
+      ]
+    },
+    {
+      "id": "cleaning",
+      "name": "Cleaning and checkup",
+      "description": "A routine cleaning with the hygienist and a quick check by the dentist, for existing patients.",
+      "durationMinutes": 60,
+      "priceUsd": 129,
+      "keywords": [
+        "cleaning and checkup",
+        "cleaning",
+        "teeth cleaning",
+        "checkup",
+        "check up",
+        "routine cleaning",
+        "six month",
+        "hygienist"
+      ]
+    },
+    {
+      "id": "emergency_exam",
+      "name": "Emergency exam",
+      "description": "A same-day or next-day visit for tooth pain, a broken tooth or a lost filling.",
+      "durationMinutes": 30,
+      "priceUsd": 95,
+      "keywords": [
+        "emergency exam",
+        "toothache",
+        "tooth pain",
+        "broken tooth",
+        "chipped tooth",
+        "lost filling",
+        "crown fell off",
+        "emergency visit"
+      ]
+    },
+    {
+      "id": "filling",
+      "name": "Filling",
+      "description": "A tooth-coloured filling for a cavity found at an earlier exam.",
+      "durationMinutes": 60,
+      "priceUsd": 150,
+      "priceNote": "starting price, per tooth",
+      "keywords": [
+        "filling",
+        "cavity",
+        "fillings"
+      ]
+    },
+    {
+      "id": "whitening",
+      "name": "Teeth whitening",
+      "description": "In-office whitening in one visit.",
+      "durationMinutes": 90,
+      "priceUsd": 399,
+      "depositUsd": 100,
+      "keywords": [
+        "teeth whitening",
+        "whitening",
+        "whiten",
+        "bleaching"
+      ]
+    },
+    {
+      "id": "aligner_consult",
+      "name": "Clear aligner consultation",
+      "description": "A free consultation about clear aligners (invisible braces).",
+      "durationMinutes": 30,
+      "priceUsd": 0,
+      "keywords": [
+        "clear aligner consultation",
+        "invisalign",
+        "aligners",
+        "clear aligners",
+        "braces",
+        "straighten",
+        "aligner consultation"
+      ]
+    }
+  ],
+  "faq": [
+    {
+      "id": "hours",
+      "topic": "Hours",
+      "keywords": [
+        "hours",
+        "open",
+        "close",
+        "closing",
+        "opening",
+        "what time",
+        "when are you open",
+        "weekend",
+        "saturday",
+        "sunday"
+      ],
+      "answer": "{{hours}}"
+    },
+    {
+      "id": "services_prices",
+      "topic": "Services and prices",
+      "keywords": [
+        "services",
+        "prices",
+        "price list",
+        "how much",
+        "cost",
+        "what do you offer",
+        "what do you do"
+      ],
+      "answer": "We offer {{services}}."
+    },
+    {
+      "id": "insurance",
+      "topic": "Insurance",
+      "keywords": [
+        "insurance",
+        "delta dental",
+        "cigna",
+        "aetna",
+        "metlife",
+        "ppo",
+        "in network",
+        "medicaid",
+        "take my insurance"
+      ],
+      "answer": "We are in network with most PPO plans, including Delta Dental, Cigna, Aetna and MetLife. We do not take Medicaid. Bring your insurance card and we check your benefits before treatment."
+    },
+    {
+      "id": "payment_and_financing",
+      "topic": "Payment and financing",
+      "keywords": [
+        "payment",
+        "pay",
+        "credit card",
+        "financing",
+        "payment plan",
+        "care credit",
+        "carecredit",
+        "hsa",
+        "fsa",
+        "cash"
+      ],
+      "answer": "We take all major cards, HSA and FSA cards, and CareCredit financing. Payment is due at the visit."
+    },
+    {
+      "id": "parking_and_location",
+      "topic": "Parking and location",
+      "keywords": [
+        "parking",
+        "park",
+        "where are you",
+        "address",
+        "location",
+        "directions",
+        "located"
+      ],
+      "answer": "We are at {{address}}. There is free parking behind the building."
+    },
+    {
+      "id": "new_patients",
+      "topic": "New patients",
+      "keywords": [
+        "new patients",
+        "accepting",
+        "taking new patients",
+        "new patient"
+      ],
+      "answer": "Yes, we are welcoming new patients. A first visit is the new patient exam and cleaning, {{price:new_patient_visit}}, with a {{deposit:new_patient_visit}} deposit to hold the time."
+    },
+    {
+      "id": "children",
+      "topic": "Children",
+      "keywords": [
+        "kids",
+        "children",
+        "child",
+        "son",
+        "daughter",
+        "pediatric",
+        "toddler"
+      ],
+      "answer": "We see children from age 3, usually with Jordan, our hygienist, and Dr. Chen."
+    },
+    {
+      "id": "cancellation_policy",
+      "topic": "Cancellation policy",
+      "keywords": [
+        "cancel",
+        "cancellation",
+        "reschedule",
+        "late fee",
+        "no show",
+        "cancellation policy"
+      ],
+      "answer": "Please give us {{cancel_hours}} hours notice to cancel or move a visit. Later than that, a {{late_fee}} fee may apply."
+    },
+    {
+      "id": "deposits",
+      "topic": "Deposits",
+      "keywords": [
+        "deposit",
+        "why deposit",
+        "refund",
+        "refundable"
+      ],
+      "answer": "New patient visits and whitening need a deposit to hold the time. It comes off your bill, and it is refunded if you cancel with {{cancel_hours}} hours notice."
+    },
+    {
+      "id": "emergencies",
+      "topic": "Emergencies",
+      "keywords": [
+        "emergency",
+        "after hours",
+        "urgent",
+        "weekend",
+        "same day"
+      ],
+      "answer": "We keep time every day for emergency exams. After hours, our on-call dentist takes urgent calls. If you have trouble breathing or swallowing, call 911."
+    },
+    {
+      "id": "what_to_bring",
+      "topic": "What to bring",
+      "keywords": [
+        "bring",
+        "paperwork",
+        "forms",
+        "what do i need",
+        "id"
+      ],
+      "answer": "Please bring a photo ID, your insurance card and a list of any medicines you take. Arrive ten minutes early for a first visit."
+    }
+  ],
+  "policies": {
+    "cancellationNoticeHours": 24,
+    "lateCancelFeeUsd": 40
+  },
+  "urgent": {
+    "routeWhenOpen": "front_desk",
+    "rules": [
+      {
+        "id": "knocked_out_tooth",
+        "phrases": [
+          "knocked out",
+          "tooth fell out",
+          "tooth came out",
+          "lost a tooth",
+          "knocked my tooth out"
+        ]
+      },
+      {
+        "id": "facial_swelling",
+        "phrases": [
+          "face is swollen",
+          "face is swelling",
+          "swollen face",
+          "swelling in my face",
+          "jaw is swollen",
+          "swollen jaw",
+          "eye is swollen",
+          "cheek is swollen",
+          "swelling and fever",
+          "fever and swelling"
+        ]
+      },
+      {
+        "id": "bleeding",
+        "phrases": [
+          "will not stop bleeding",
+          "bleeding will not stop",
+          "cannot stop the bleeding",
+          "bleeding a lot",
+          "heavy bleeding",
+          "bleeding heavily"
+        ]
+      },
+      {
+        "id": "airway",
+        "phrases": [
+          "trouble breathing",
+          "cannot breathe",
+          "hard to breathe",
+          "difficulty breathing",
+          "trouble swallowing",
+          "cannot swallow",
+          "difficulty swallowing"
+        ]
+      },
+      {
+        "id": "trauma",
+        "phrases": [
+          "broken jaw",
+          "hit in the face",
+          "car accident",
+          "jaw is broken"
+        ]
+      }
+    ],
+    "ambiguous": [
+      "toothache",
+      "tooth pain",
+      "pain",
+      "swelling",
+      "swollen",
+      "bleeding",
+      "broken tooth",
+      "cracked tooth",
+      "chipped",
+      "abscess",
+      "infection",
+      "fever",
+      "throbbing",
+      "lost a filling",
+      "crown fell off"
+    ],
+    "adviceWords": [
+      "should i take",
+      "antibiotic",
+      "antibiotics",
+      "ibuprofen",
+      "tylenol",
+      "painkiller",
+      "painkillers",
+      "dose",
+      "dosage",
+      "is it infected",
+      "diagnose",
+      "what medicine"
+    ],
+    "emergencyMessage": "That sounds like it needs urgent care. If you have trouble breathing or swallowing, or bleeding that will not stop, please hang up and call 911."
+  },
+  "brand": {
+    "color": "#0f766e",
+    "tagline": "Gentle family dentistry in Jersey City"
+  }
+}

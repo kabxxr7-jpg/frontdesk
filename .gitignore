@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+coverage/
+.DS_Store
+.runtime/
+.mutation-*/
+.test-tmp/
+*.log
+secrets/
+*.pem
+*service-account*.json
+data/*.db
+data/*.db-*
+public/

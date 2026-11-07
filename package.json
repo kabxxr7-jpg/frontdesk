@@ -1,0 +1,23 @@
+{
+  "name": "frontdesk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A live AI phone front desk: answers, books into Google Calendar, emails a confirmation, takes a Stripe deposit, sends call summaries to a CRM. Re-skinnable per business.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "start": "node scripts/serve.ts",
+    "reskin": "node scripts/reskin.ts",
+    "retell:setup": "node scripts/retell-setup.ts",
+    "check:live": "node scripts/check-live.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.12"
+  }
+}
