@@ -585,5 +585,11 @@
   "brand": {
     "color": "#0f766e",
     "tagline": "Gentle family dentistry in Jersey City"
+  },
+  "demo": {
+    "tryQuestions": [
+      "Do you take Delta Dental?",
+      "How much is whitening?"
+    ]
   }
 }

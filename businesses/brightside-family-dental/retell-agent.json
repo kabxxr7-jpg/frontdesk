@@ -6,7 +6,7 @@
   },
   "voice_id": "retell-Cimo",
   "language": "en-US",
-  "webhook_url": "https://REPLACE-WITH-PUBLIC-BASE-URL/webhooks/retell",
+  "webhook_url": "https://retro-closing-worldwide-sequences.trycloudflare.com/webhooks/retell",
   "webhook_events": [
     "call_started",
     "call_ended",

@@ -6,31 +6,183 @@
   "address": "88 Example Road, Austin, Texas",
   "serviceArea": "Austin, Round Rock, Pflugerville and Cedar Park",
   "frontDeskPhone": "+15125550100",
-  "emergencyLine": { "name": "our on-call plumber", "phone": "+15125550199" },
+  "emergencyLine": {
+    "name": "our on-call plumber",
+    "phone": "+15125550199"
+  },
   "receptionistName": "Max",
   "brandColor": "#1d4ed8",
   "tagline": "Licensed plumbers across north Austin",
   "hours": {
-    "mon": [["07:00", "18:00"]], "tue": [["07:00", "18:00"]], "wed": [["07:00", "18:00"]],
-    "thu": [["07:00", "18:00"]], "fri": [["07:00", "18:00"]], "sat": [["08:00", "13:00"]]
+    "mon": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "tue": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "wed": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "thu": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "fri": [
+      [
+        "07:00",
+        "18:00"
+      ]
+    ],
+    "sat": [
+      [
+        "08:00",
+        "13:00"
+      ]
+    ]
   },
   "staff": [
-    { "name": "Marco Diaz", "title": "master plumber", "services": ["leak_repair", "water_heater_service", "drain_cleaning", "estimate"] },
-    { "name": "Tessa Grant", "title": "plumber", "services": ["leak_repair", "drain_cleaning", "estimate"] }
+    {
+      "name": "Marco Diaz",
+      "title": "master plumber",
+      "services": [
+        "leak_repair",
+        "water_heater_service",
+        "drain_cleaning",
+        "estimate"
+      ]
+    },
+    {
+      "name": "Tessa Grant",
+      "title": "plumber",
+      "services": [
+        "leak_repair",
+        "drain_cleaning",
+        "estimate"
+      ]
+    }
   ],
   "services": [
-    { "id": "drain_cleaning", "name": "Drain cleaning", "description": "Clearing a slow or blocked sink, tub, shower or toilet drain.", "minutes": 60, "price": 149, "keywords": ["clog", "clogged", "blocked drain", "slow drain", "toilet clogged", "drain"] },
-    { "id": "leak_repair", "name": "Leak repair visit", "description": "Finding and fixing a leaking pipe, faucet or toilet. Parts are extra.", "minutes": 90, "price": 129, "priceNote": "service call, parts extra", "deposit": 39, "keywords": ["leak", "leaking", "drip", "dripping faucet", "running toilet", "pipe leak"] },
-    { "id": "water_heater_service", "name": "Water heater service", "description": "Diagnosis or repair of a tank or tankless water heater.", "minutes": 120, "price": 189, "priceNote": "diagnosis, repair quoted on site", "deposit": 49, "keywords": ["water heater", "no hot water", "tankless", "hot water heater"] },
-    { "id": "estimate", "name": "Free estimate", "description": "A visit to quote a bigger job such as a repipe or a bathroom remodel.", "minutes": 60, "price": 0, "keywords": ["estimate", "quote", "repipe", "remodel", "bid"] }
+    {
+      "id": "drain_cleaning",
+      "name": "Drain cleaning",
+      "description": "Clearing a slow or blocked sink, tub, shower or toilet drain.",
+      "minutes": 60,
+      "price": 149,
+      "keywords": [
+        "clog",
+        "clogged",
+        "blocked drain",
+        "slow drain",
+        "toilet clogged",
+        "drain"
+      ]
+    },
+    {
+      "id": "leak_repair",
+      "name": "Leak repair visit",
+      "description": "Finding and fixing a leaking pipe, faucet or toilet. Parts are extra.",
+      "minutes": 90,
+      "price": 129,
+      "priceNote": "service call, parts extra",
+      "deposit": 39,
+      "keywords": [
+        "leak",
+        "leaking",
+        "drip",
+        "dripping faucet",
+        "running toilet",
+        "pipe leak"
+      ]
+    },
+    {
+      "id": "water_heater_service",
+      "name": "Water heater service",
+      "description": "Diagnosis or repair of a tank or tankless water heater.",
+      "minutes": 120,
+      "price": 189,
+      "priceNote": "diagnosis, repair quoted on site",
+      "deposit": 49,
+      "keywords": [
+        "water heater",
+        "no hot water",
+        "tankless",
+        "hot water heater"
+      ]
+    },
+    {
+      "id": "estimate",
+      "name": "Free estimate",
+      "description": "A visit to quote a bigger job such as a repipe or a bathroom remodel.",
+      "minutes": 60,
+      "price": 0,
+      "keywords": [
+        "estimate",
+        "quote",
+        "repipe",
+        "remodel",
+        "bid"
+      ]
+    }
   ],
   "faq": [
-    { "topic": "Licensed and insured", "keywords": ["licensed", "insured", "license", "insurance"], "answer": "Yes. Every plumber is licensed in Texas and the company is fully insured." },
-    { "topic": "Payment", "keywords": ["payment", "pay", "credit card", "cash", "financing"], "answer": "We take cards and cash, and offer financing on jobs over a thousand dollars. Payment is due when the job is done." },
-    { "topic": "Warranty", "keywords": ["warranty", "guarantee", "guaranteed"], "answer": "Labour is guaranteed for one year; parts carry the maker's warranty." },
-    { "topic": "Arrival window", "keywords": ["arrival", "window", "when will you arrive", "on time", "what time will"], "answer": "The plumber arrives within the first thirty minutes of the booked time and calls when on the way." }
+    {
+      "topic": "Licensed and insured",
+      "keywords": [
+        "licensed",
+        "insured",
+        "license",
+        "insurance"
+      ],
+      "answer": "Yes. Every plumber is licensed in Texas and the company is fully insured."
+    },
+    {
+      "topic": "Payment",
+      "keywords": [
+        "payment",
+        "pay",
+        "credit card",
+        "cash",
+        "financing"
+      ],
+      "answer": "We take cards and cash, and offer financing on jobs over a thousand dollars. Payment is due when the job is done."
+    },
+    {
+      "topic": "Warranty",
+      "keywords": [
+        "warranty",
+        "guarantee",
+        "guaranteed"
+      ],
+      "answer": "Labour is guaranteed for one year; parts carry the maker's warranty."
+    },
+    {
+      "topic": "Arrival window",
+      "keywords": [
+        "arrival",
+        "window",
+        "when will you arrive",
+        "on time",
+        "what time will"
+      ],
+      "answer": "The plumber arrives within the first thirty minutes of the booked time and calls when on the way."
+    }
   ],
   "cancellationNoticeHours": 4,
   "lateCancelFeeUsd": 0,
-  "minLeadMinutes": 120
+  "minLeadMinutes": 120,
+  "tryQuestions": [
+    "Do you cover Round Rock?",
+    "Are you licensed?"
+  ]
 }

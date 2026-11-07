@@ -5,66 +5,430 @@
   "timezone": "America/New_York",
   "address": "1450 Example Avenue, Jersey City, New Jersey",
   "frontDeskPhone": "+12015550100",
-  "emergencyLine": { "name": "our after-hours on-call dentist", "phone": "+12015550142" },
+  "emergencyLine": {
+    "name": "our after-hours on-call dentist",
+    "phone": "+12015550142"
+  },
   "receptionistName": "Ava",
   "brandColor": "#0f766e",
   "tagline": "Gentle family dentistry in Jersey City",
   "hours": {
-    "mon": [["08:00", "18:00"]],
-    "tue": [["08:00", "18:00"]],
-    "wed": [["08:00", "18:00"]],
-    "thu": [["08:00", "18:00"]],
-    "fri": [["08:00", "15:00"]],
-    "sat": [["09:00", "14:00"]]
+    "mon": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "tue": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "wed": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "thu": [
+      [
+        "08:00",
+        "18:00"
+      ]
+    ],
+    "fri": [
+      [
+        "08:00",
+        "15:00"
+      ]
+    ],
+    "sat": [
+      [
+        "09:00",
+        "14:00"
+      ]
+    ]
   },
   "closedDates": [
-    { "date": "2026-11-26", "reason": "Thanksgiving" },
-    { "date": "2026-12-24", "reason": "Christmas Eve" },
-    { "date": "2026-12-25", "reason": "Christmas Day" },
-    { "date": "2027-01-01", "reason": "New Year's Day" }
+    {
+      "date": "2026-11-26",
+      "reason": "Thanksgiving"
+    },
+    {
+      "date": "2026-12-24",
+      "reason": "Christmas Eve"
+    },
+    {
+      "date": "2026-12-25",
+      "reason": "Christmas Day"
+    },
+    {
+      "date": "2027-01-01",
+      "reason": "New Year's Day"
+    }
   ],
   "staff": [
-    { "name": "Dr. Lena Chen", "short": "Dr. Chen", "title": "dentist", "services": ["new_patient_visit", "emergency_exam", "filling", "whitening", "aligner_consult"],
-      "schedule": { "mon": [["08:00", "12:00"], ["13:00", "18:00"]], "tue": [["08:00", "12:00"], ["13:00", "18:00"]], "thu": [["08:00", "12:00"], ["13:00", "18:00"]], "sat": [["09:00", "14:00"]] } },
-    { "name": "Dr. Marcus Reyes", "short": "Dr. Reyes", "title": "dentist", "services": ["new_patient_visit", "emergency_exam", "filling", "aligner_consult"],
-      "schedule": { "mon": [["09:00", "17:00"]], "wed": [["08:00", "12:00"], ["13:00", "18:00"]], "thu": [["09:00", "17:00"]], "fri": [["08:00", "15:00"]], "sat": [["09:00", "14:00"]] } },
-    { "name": "Jordan Patel", "short": "Jordan", "title": "dental hygienist", "services": ["cleaning", "new_patient_visit"],
-      "schedule": { "mon": [["08:00", "12:00"], ["13:00", "17:00"]], "tue": [["08:00", "12:00"], ["13:00", "17:00"]], "wed": [["08:00", "12:00"], ["13:00", "17:00"]], "fri": [["08:00", "15:00"]], "sat": [["09:00", "14:00"]] } }
+    {
+      "name": "Dr. Lena Chen",
+      "short": "Dr. Chen",
+      "title": "dentist",
+      "services": [
+        "new_patient_visit",
+        "emergency_exam",
+        "filling",
+        "whitening",
+        "aligner_consult"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "thu": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "sat": [
+          [
+            "09:00",
+            "14:00"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "Dr. Marcus Reyes",
+      "short": "Dr. Reyes",
+      "title": "dentist",
+      "services": [
+        "new_patient_visit",
+        "emergency_exam",
+        "filling",
+        "aligner_consult"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "09:00",
+            "17:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "18:00"
+          ]
+        ],
+        "thu": [
+          [
+            "09:00",
+            "17:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "09:00",
+            "14:00"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "Jordan Patel",
+      "short": "Jordan",
+      "title": "dental hygienist",
+      "services": [
+        "cleaning",
+        "new_patient_visit"
+      ],
+      "schedule": {
+        "mon": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "17:00"
+          ]
+        ],
+        "tue": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "17:00"
+          ]
+        ],
+        "wed": [
+          [
+            "08:00",
+            "12:00"
+          ],
+          [
+            "13:00",
+            "17:00"
+          ]
+        ],
+        "fri": [
+          [
+            "08:00",
+            "15:00"
+          ]
+        ],
+        "sat": [
+          [
+            "09:00",
+            "14:00"
+          ]
+        ]
+      }
+    }
   ],
   "services": [
-    { "id": "new_patient_visit", "name": "New patient exam and cleaning", "description": "A full exam, x-rays and a cleaning for first-time patients.", "minutes": 60, "price": 189, "deposit": 50,
-      "keywords": ["new patient", "first visit", "first time", "new patient exam", "exam and cleaning"] },
-    { "id": "cleaning", "name": "Cleaning and checkup", "description": "A routine cleaning with the hygienist and a quick check by the dentist, for existing patients.", "minutes": 60, "price": 129,
-      "keywords": ["cleaning", "teeth cleaning", "checkup", "check up", "routine cleaning", "six month", "hygienist"] },
-    { "id": "emergency_exam", "name": "Emergency exam", "description": "A same-day or next-day visit for tooth pain, a broken tooth or a lost filling.", "minutes": 30, "price": 95,
-      "keywords": ["emergency exam", "toothache", "tooth pain", "broken tooth", "chipped tooth", "lost filling", "crown fell off", "emergency visit"] },
-    { "id": "filling", "name": "Filling", "description": "A tooth-coloured filling for a cavity found at an earlier exam.", "minutes": 60, "price": 150, "priceNote": "starting price, per tooth",
-      "keywords": ["filling", "cavity", "fillings"] },
-    { "id": "whitening", "name": "Teeth whitening", "description": "In-office whitening in one visit.", "minutes": 90, "price": 399, "deposit": 100,
-      "keywords": ["whitening", "teeth whitening", "whiten", "bleaching"] },
-    { "id": "aligner_consult", "name": "Clear aligner consultation", "description": "A free consultation about clear aligners (invisible braces).", "minutes": 30, "price": 0,
-      "keywords": ["invisalign", "aligners", "clear aligners", "braces", "straighten", "aligner consultation"] }
+    {
+      "id": "new_patient_visit",
+      "name": "New patient exam and cleaning",
+      "description": "A full exam, x-rays and a cleaning for first-time patients.",
+      "minutes": 60,
+      "price": 189,
+      "deposit": 50,
+      "keywords": [
+        "new patient",
+        "first visit",
+        "first time",
+        "new patient exam",
+        "exam and cleaning"
+      ]
+    },
+    {
+      "id": "cleaning",
+      "name": "Cleaning and checkup",
+      "description": "A routine cleaning with the hygienist and a quick check by the dentist, for existing patients.",
+      "minutes": 60,
+      "price": 129,
+      "keywords": [
+        "cleaning",
+        "teeth cleaning",
+        "checkup",
+        "check up",
+        "routine cleaning",
+        "six month",
+        "hygienist"
+      ]
+    },
+    {
+      "id": "emergency_exam",
+      "name": "Emergency exam",
+      "description": "A same-day or next-day visit for tooth pain, a broken tooth or a lost filling.",
+      "minutes": 30,
+      "price": 95,
+      "keywords": [
+        "emergency exam",
+        "toothache",
+        "tooth pain",
+        "broken tooth",
+        "chipped tooth",
+        "lost filling",
+        "crown fell off",
+        "emergency visit"
+      ]
+    },
+    {
+      "id": "filling",
+      "name": "Filling",
+      "description": "A tooth-coloured filling for a cavity found at an earlier exam.",
+      "minutes": 60,
+      "price": 150,
+      "priceNote": "starting price, per tooth",
+      "keywords": [
+        "filling",
+        "cavity",
+        "fillings"
+      ]
+    },
+    {
+      "id": "whitening",
+      "name": "Teeth whitening",
+      "description": "In-office whitening in one visit.",
+      "minutes": 90,
+      "price": 399,
+      "deposit": 100,
+      "keywords": [
+        "whitening",
+        "teeth whitening",
+        "whiten",
+        "bleaching"
+      ]
+    },
+    {
+      "id": "aligner_consult",
+      "name": "Clear aligner consultation",
+      "description": "A free consultation about clear aligners (invisible braces).",
+      "minutes": 30,
+      "price": 0,
+      "keywords": [
+        "invisalign",
+        "aligners",
+        "clear aligners",
+        "braces",
+        "straighten",
+        "aligner consultation"
+      ]
+    }
   ],
   "faq": [
-    { "topic": "Insurance", "keywords": ["insurance", "delta dental", "cigna", "aetna", "metlife", "ppo", "in network", "medicaid", "take my insurance"],
-      "answer": "We are in network with most PPO plans, including Delta Dental, Cigna, Aetna and MetLife. We do not take Medicaid. Bring your insurance card and we check your benefits before treatment." },
-    { "topic": "Payment and financing", "keywords": ["payment", "pay", "credit card", "financing", "payment plan", "care credit", "carecredit", "hsa", "fsa", "cash"],
-      "answer": "We take all major cards, HSA and FSA cards, and CareCredit financing. Payment is due at the visit." },
-    { "topic": "Parking and location", "keywords": ["parking", "park", "where are you", "address", "location", "directions", "located"],
-      "answer": "We are at {{address}}. There is free parking behind the building." },
-    { "topic": "New patients", "keywords": ["new patients", "accepting", "taking new patients", "new patient"],
-      "answer": "Yes, we are welcoming new patients. A first visit is the new patient exam and cleaning, {{price:new_patient_visit}}, with a {{deposit:new_patient_visit}} deposit to hold the time." },
-    { "topic": "Children", "keywords": ["kids", "children", "child", "son", "daughter", "pediatric", "toddler"],
-      "answer": "We see children from age 3, usually with Jordan, our hygienist, and Dr. Chen." },
-    { "topic": "Cancellation policy", "keywords": ["cancel", "cancellation", "reschedule", "late fee", "no show", "cancellation policy"],
-      "answer": "Please give us {{cancel_hours}} hours notice to cancel or move a visit. Later than that, a {{late_fee}} fee may apply." },
-    { "topic": "Deposits", "keywords": ["deposit", "why deposit", "refund", "refundable"],
-      "answer": "New patient visits and whitening need a deposit to hold the time. It comes off your bill, and it is refunded if you cancel with {{cancel_hours}} hours notice." },
-    { "topic": "Emergencies", "keywords": ["emergency", "after hours", "urgent", "weekend", "same day"],
-      "answer": "We keep time every day for emergency exams. After hours, our on-call dentist takes urgent calls. If you have trouble breathing or swallowing, call 911." },
-    { "topic": "What to bring", "keywords": ["bring", "paperwork", "forms", "what do i need", "id"],
-      "answer": "Please bring a photo ID, your insurance card and a list of any medicines you take. Arrive ten minutes early for a first visit." }
+    {
+      "topic": "Insurance",
+      "keywords": [
+        "insurance",
+        "delta dental",
+        "cigna",
+        "aetna",
+        "metlife",
+        "ppo",
+        "in network",
+        "medicaid",
+        "take my insurance"
+      ],
+      "answer": "We are in network with most PPO plans, including Delta Dental, Cigna, Aetna and MetLife. We do not take Medicaid. Bring your insurance card and we check your benefits before treatment."
+    },
+    {
+      "topic": "Payment and financing",
+      "keywords": [
+        "payment",
+        "pay",
+        "credit card",
+        "financing",
+        "payment plan",
+        "care credit",
+        "carecredit",
+        "hsa",
+        "fsa",
+        "cash"
+      ],
+      "answer": "We take all major cards, HSA and FSA cards, and CareCredit financing. Payment is due at the visit."
+    },
+    {
+      "topic": "Parking and location",
+      "keywords": [
+        "parking",
+        "park",
+        "where are you",
+        "address",
+        "location",
+        "directions",
+        "located"
+      ],
+      "answer": "We are at {{address}}. There is free parking behind the building."
+    },
+    {
+      "topic": "New patients",
+      "keywords": [
+        "new patients",
+        "accepting",
+        "taking new patients",
+        "new patient"
+      ],
+      "answer": "Yes, we are welcoming new patients. A first visit is the new patient exam and cleaning, {{price:new_patient_visit}}, with a {{deposit:new_patient_visit}} deposit to hold the time."
+    },
+    {
+      "topic": "Children",
+      "keywords": [
+        "kids",
+        "children",
+        "child",
+        "son",
+        "daughter",
+        "pediatric",
+        "toddler"
+      ],
+      "answer": "We see children from age 3, usually with Jordan, our hygienist, and Dr. Chen."
+    },
+    {
+      "topic": "Cancellation policy",
+      "keywords": [
+        "cancel",
+        "cancellation",
+        "reschedule",
+        "late fee",
+        "no show",
+        "cancellation policy"
+      ],
+      "answer": "Please give us {{cancel_hours}} hours notice to cancel or move a visit. Later than that, a {{late_fee}} fee may apply."
+    },
+    {
+      "topic": "Deposits",
+      "keywords": [
+        "deposit",
+        "why deposit",
+        "refund",
+        "refundable"
+      ],
+      "answer": "New patient visits and whitening need a deposit to hold the time. It comes off your bill, and it is refunded if you cancel with {{cancel_hours}} hours notice."
+    },
+    {
+      "topic": "Emergencies",
+      "keywords": [
+        "emergency",
+        "after hours",
+        "urgent",
+        "weekend",
+        "same day"
+      ],
+      "answer": "We keep time every day for emergency exams. After hours, our on-call dentist takes urgent calls. If you have trouble breathing or swallowing, call 911."
+    },
+    {
+      "topic": "What to bring",
+      "keywords": [
+        "bring",
+        "paperwork",
+        "forms",
+        "what do i need",
+        "id"
+      ],
+      "answer": "Please bring a photo ID, your insurance card and a list of any medicines you take. Arrive ten minutes early for a first visit."
+    }
   ],
   "cancellationNoticeHours": 24,
-  "lateCancelFeeUsd": 40
+  "lateCancelFeeUsd": 40,
+  "tryQuestions": [
+    "Do you take Delta Dental?",
+    "How much is whitening?"
+  ]
 }

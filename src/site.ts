@@ -26,7 +26,7 @@ export function buildSite(b: Business, o: SiteOptions): string {
   const deposits = b.services.filter((s) => s.depositUsd);
   const tryList = [
     `Book a ${vw}: "I'd like ${b.services[0] ? `a ${b.services[0].name.toLowerCase()}` : "to book"} next week, in the morning."`,
-    `Ask a question: "${b.faq.find((f) => !["hours", "services_prices"].includes(f.id))?.topic ?? "What are your hours"}?"`,
+    `Ask a question: ${(b.demo?.tryQuestions ?? ["What are your hours on Saturday?"]).map((q) => `"${q}"`).join(" or ")}`,
     `Move or cancel it: give the four-character code from your confirmation email.`,
     `Say something urgent${b.urgent.rules[0] ? ` (for example "${b.urgent.rules[0].phrases[0]}")` : ""}: it stops booking and routes you to a person.`,
     `Ask for a time outside the hours, or one that is already taken.`,

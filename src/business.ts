@@ -93,6 +93,8 @@ export interface Business {
     emergencyMessage: string;
   };
   brand: { color: string; tagline: string };
+  /** Sentences the demo page suggests a caller tries. */
+  demo?: { tryQuestions: string[] };
 }
 
 const E164 = /^\+[1-9]\d{7,14}$/;

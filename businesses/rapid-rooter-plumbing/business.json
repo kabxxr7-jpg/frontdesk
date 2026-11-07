@@ -410,5 +410,11 @@
   "brand": {
     "color": "#1d4ed8",
     "tagline": "Licensed plumbers across north Austin"
+  },
+  "demo": {
+    "tryQuestions": [
+      "Do you cover Round Rock?",
+      "Are you licensed?"
+    ]
   }
 }

@@ -26,6 +26,8 @@ export interface Brief {
   lateCancelFeeUsd?: number;
   slotMinutes?: number;
   minLeadMinutes?: number;
+  /** Questions the demo page suggests ("Do you take Delta Dental?"). */
+  tryQuestions?: string[];
 }
 
 interface Preset {
@@ -171,6 +173,7 @@ export function buildBusiness(brief: Brief): { business: Business; problems: str
     policies: { cancellationNoticeHours: brief.cancellationNoticeHours ?? 24, lateCancelFeeUsd: brief.lateCancelFeeUsd ?? 0 },
     urgent: { routeWhenOpen: preset.routeWhenOpen, rules: preset.rules, ambiguous: preset.ambiguous, adviceWords: preset.adviceWords, emergencyMessage: preset.emergencyMessage },
     brand: { color: brief.brandColor ?? "#0f766e", tagline: brief.tagline ?? `${brief.name}` },
+    ...(brief.tryQuestions?.length ? { demo: { tryQuestions: brief.tryQuestions } } : {}),
   };
   if (!brief.emergencyLine && business.urgent.routeWhenOpen === "emergency_line") business.urgent.routeWhenOpen = "front_desk";
   return { business, problems: validateBusiness(business) };

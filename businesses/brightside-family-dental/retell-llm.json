@@ -14,7 +14,7 @@
       "type": "custom",
       "name": "lookup_faq",
       "description": "Answer a question about the business (hours, location, prices, insurance, payment, policies) from the business's own fact sheet. Read the returned message to the caller.",
-      "url": "https://REPLACE-WITH-PUBLIC-BASE-URL/tools/lookup_faq",
+      "url": "https://retro-closing-worldwide-sequences.trycloudflare.com/tools/lookup_faq",
       "method": "POST",
       "parameters": {
         "type": "object",
@@ -37,7 +37,7 @@
       "type": "custom",
       "name": "get_availability",
       "description": "Find open times for a service. Call before offering any time. Dates are YYYY-MM-DD in the business's local time.",
-      "url": "https://REPLACE-WITH-PUBLIC-BASE-URL/tools/get_availability",
+      "url": "https://retro-closing-worldwide-sequences.trycloudflare.com/tools/get_availability",
       "method": "POST",
       "parameters": {
         "type": "object",
@@ -82,7 +82,7 @@
       "type": "custom",
       "name": "book_appointment",
       "description": "Book one time the caller has chosen. Only after get_availability and after reading back the details. Never invent a time.",
-      "url": "https://REPLACE-WITH-PUBLIC-BASE-URL/tools/book_appointment",
+      "url": "https://retro-closing-worldwide-sequences.trycloudflare.com/tools/book_appointment",
       "method": "POST",
       "parameters": {
         "type": "object",
@@ -136,7 +136,7 @@
       "type": "custom",
       "name": "reschedule_appointment",
       "description": "Move an existing booking to a new time. Find it by confirmation code, or by the phone number it was booked under.",
-      "url": "https://REPLACE-WITH-PUBLIC-BASE-URL/tools/reschedule_appointment",
+      "url": "https://retro-closing-worldwide-sequences.trycloudflare.com/tools/reschedule_appointment",
       "method": "POST",
       "parameters": {
         "type": "object",
@@ -173,7 +173,7 @@
       "type": "custom",
       "name": "cancel_appointment",
       "description": "Cancel an existing booking after the caller confirms. Find it by confirmation code, or by the phone number it was booked under.",
-      "url": "https://REPLACE-WITH-PUBLIC-BASE-URL/tools/cancel_appointment",
+      "url": "https://retro-closing-worldwide-sequences.trycloudflare.com/tools/cancel_appointment",
       "method": "POST",
       "parameters": {
         "type": "object",
@@ -200,7 +200,7 @@
       "type": "custom",
       "name": "request_transfer",
       "description": "Decide whether and where to transfer: when the caller asks for a person, has an urgent problem, or you cannot help. Follow the returned instruction exactly.",
-      "url": "https://REPLACE-WITH-PUBLIC-BASE-URL/tools/request_transfer",
+      "url": "https://retro-closing-worldwide-sequences.trycloudflare.com/tools/request_transfer",
       "method": "POST",
       "parameters": {
         "type": "object",
