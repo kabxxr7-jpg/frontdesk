@@ -18,7 +18,7 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 | Call recordings | **Off** | Recording is switched off on the assistant; the demo is calling the line, not listening to a recording |
 | Retell | Built and tested in code, not funded | The same agent runs on Retell with `npm run retell:setup`; no Retell number was bought |
 | n8n to HubSpot / team email / GoHighLevel | Workflow written, not yet connected; GoHighLevel off (no trial account) | `deploy/n8n/` |
-| Hosting | The server runs on a Mac behind a Cloudflare tunnel; the demo page is served by the same server | The droplet setup in `deploy/` is written but not used |
+| Hosting | The server runs on a Mac behind a named Cloudflare tunnel at desk.kabiirlabs.com (since 8 Nov 2026); the demo page is served by the same server. Down whenever the Mac is off | The droplet setup in `deploy/` is written but not used |
 | Transfers to a person | Simulated on the demo: the business's numbers are fictional, so the agent says where it would connect and flags the call | `TRANSFERS_LIVE=true` turns real transfers on |
 | The business | **Fictional.** Brightside Family Dental and Rapid Rooter Plumbing are invented: names, staff, prices, addresses, phone numbers | `briefs/` |
 
