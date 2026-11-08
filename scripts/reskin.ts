@@ -8,8 +8,8 @@
 //   vapi-assistant.json the Vapi assistant body (the shared secret is a placeholder; vapi:setup sends the real one)
 //   site/index.html    the demo page
 // and prints what to do next. Exit code 1 with a list of problems when the brief is incomplete.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import { buildPrompt, buildRetellAgent, buildRetellLlm } from "../src/agent-config.ts";
 import { buildBusiness, checkBrief, type Brief } from "../src/reskin.ts";
 import { buildSite } from "../src/site.ts";
@@ -66,12 +66,35 @@ writeFileSync(
   buildSite(business, {
     phone: flag("phone"),
     platform: flag("platform") ?? "Vapi",
+    builder: env("BUILDER_NAME") ?? "Kabiir Labs",
+    ...(env("BUILDER_URL") ? { builderUrl: env("BUILDER_URL") as string } : {}),
+    ...liveOptions(),
     liveSince: flag("live-since"),
     depositsOn: business.services.some((s) => s.depositUsd) && Boolean(env("STRIPE_SECRET_KEY")),
     crmOn: Boolean(env("N8N_WEBHOOK_URL")),
   }),
 );
 const secs = ((Date.now() - started) / 1000).toFixed(2);
+
+/** Browser call for the business on the live line; a link to the live demo from the others; links between demos. */
+function liveOptions() {
+  const activeSlug = basename(env("BUSINESS_DIR") ?? "businesses/brightside-family-dental");
+  const isActive = activeSlug === business.slug;
+  const all = (existsSync(outRoot) ? readdirSync(outRoot) : [])
+    .filter((slug) => existsSync(join(outRoot, slug, "business.json")))
+    .map((slug) => {
+      const bj = JSON.parse(readFileSync(join(outRoot, slug, "business.json"), "utf8")) as { name: string; vertical: string };
+      return { slug, name: bj.name, vertical: bj.vertical, url: slug === activeSlug ? "/" : `/demos/${slug}/` };
+    });
+  const active = all.find((x) => x.slug === activeSlug);
+  const publicKey = env("VAPI_PUBLIC_KEY");
+  const assistantId = env("VAPI_ASSISTANT_ID");
+  return {
+    ...(isActive && publicKey && assistantId ? { webCall: { publicKey, assistantId } } : {}),
+    ...(!isActive && active ? { liveDemo: { url: active.url, name: active.name } } : {}),
+    otherDemos: all.map(({ url, name, vertical }) => ({ url, name, vertical })),
+  };
+}
 console.log(`Re-skinned ${business.name} (${business.vertical}) into ${dir} in ${secs} s:
   business.json  ${business.services.length} services, ${business.staff.length} staff, ${business.faq.length} FAQ entries, ${business.urgent.rules.length} urgent rules
   prompt.md, vapi-assistant.json, retell-llm.json, retell-agent.json, site/index.html

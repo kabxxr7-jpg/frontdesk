@@ -57,7 +57,8 @@ export function buildVapiAssistant(b: Business, o: VapiOptions) {
         { type: "endCall" },
       ],
     },
-    voice: { provider: "vapi", voiceId: o.voiceId ?? "Elliot" },
+    // Clara: female, American, "natural, professional" in Vapi's list; version 2 is their newer, more natural model.
+    voice: { provider: "vapi", voiceId: o.voiceId ?? "Clara", version: 2 },
     transcriber: { provider: "deepgram", model: "nova-3", language: "en" },
     maxDurationSeconds: Math.max(60, Math.min(o.maxCallSeconds, 900)),
     silenceTimeoutSeconds: 20,

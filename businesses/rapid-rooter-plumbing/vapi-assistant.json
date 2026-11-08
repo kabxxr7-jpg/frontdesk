@@ -32,7 +32,7 @@
           }
         },
         "server": {
-          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "url": "https://desk.kabiirlabs.com/vapi",
           "timeoutSeconds": 20,
           "headers": {
             "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
@@ -78,7 +78,7 @@
           }
         },
         "server": {
-          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "url": "https://desk.kabiirlabs.com/vapi",
           "timeoutSeconds": 20,
           "headers": {
             "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
@@ -139,7 +139,7 @@
           }
         },
         "server": {
-          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "url": "https://desk.kabiirlabs.com/vapi",
           "timeoutSeconds": 20,
           "headers": {
             "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
@@ -183,7 +183,7 @@
           }
         },
         "server": {
-          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "url": "https://desk.kabiirlabs.com/vapi",
           "timeoutSeconds": 20,
           "headers": {
             "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
@@ -219,7 +219,7 @@
           }
         },
         "server": {
-          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "url": "https://desk.kabiirlabs.com/vapi",
           "timeoutSeconds": 20,
           "headers": {
             "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
@@ -245,7 +245,7 @@
           }
         },
         "server": {
-          "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+          "url": "https://desk.kabiirlabs.com/vapi",
           "timeoutSeconds": 20,
           "headers": {
             "x-frontdesk-token": "<VAPI_SERVER_SECRET>"
@@ -259,7 +259,8 @@
   },
   "voice": {
     "provider": "vapi",
-    "voiceId": "Elliot"
+    "voiceId": "Clara",
+    "version": 2
   },
   "transcriber": {
     "provider": "deepgram",
@@ -269,7 +270,7 @@
   "maxDurationSeconds": 300,
   "silenceTimeoutSeconds": 20,
   "server": {
-    "url": "https://attempting-bob-against-scott.trycloudflare.com/vapi",
+    "url": "https://desk.kabiirlabs.com/vapi",
     "timeoutSeconds": 20,
     "headers": {
       "x-frontdesk-token": "<VAPI_SERVER_SECRET>"

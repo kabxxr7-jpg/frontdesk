@@ -9,6 +9,14 @@ mkdir -p .runtime
 v() { grep "^$1=" .env | head -1 | cut -d= -f2-; }
 
 # Named tunnel (kabiirlabs.com on Cloudflare): the address never changes, so only restart the tunnel and the server.
+if [ -f "$HOME/Library/LaunchAgents/com.kabiirlabs.frontdesk.server.plist" ]; then
+  # Installed with deploy/launchd/install.sh: let launchd restart both.
+  launchctl kickstart -k "gui/$(id -u)/com.kabiirlabs.frontdesk.tunnel"
+  launchctl kickstart -k "gui/$(id -u)/com.kabiirlabs.frontdesk.server"
+  sleep 8
+  echo "restarted by launchd; $(v PUBLIC_BASE_URL)/healthz -> $(curl -s -o /dev/null -w '%{http_code}' "$(v PUBLIC_BASE_URL)/healthz")"
+  exit 0
+fi
 if [ -f "$HOME/.cloudflared/frontdesk.yml" ]; then
   pkill -f 'cloudflared tunnel --config' || true
   nohup cloudflared tunnel --config "$HOME/.cloudflared/frontdesk.yml" --no-autoupdate run frontdesk >.runtime/named-tunnel.log 2>&1 &

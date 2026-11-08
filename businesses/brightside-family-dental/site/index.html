@@ -3,68 +3,225 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Brightside Family Dental front desk demo</title>
-<meta name="description" content="Call a live AI front desk for a fictional dental clinic: it answers, books into a real calendar, emails a confirmation and takes a test-mode deposit.">
+<title>Ava, the AI receptionist for Brightside Family Dental</title>
+<meta name="description" content="Talk to Ava, an AI receptionist that answers calls, books into a real calendar and emails a confirmation. A live demo for a fictional dental clinic.">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#0f766e;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f8fafc;--card:#fff}
-@media (prefers-color-scheme:dark){:root{--ink:#e5e7eb;--muted:#9ca3af;--line:#374151;--bg:#0b1220;--card:#111827}}
-*{box-sizing:border-box}body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55}
-main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
-header{padding:28px 0 8px}h1{font-size:30px;line-height:1.2;margin:0 0 8px}h2{font-size:20px;margin:36px 0 12px}
-.tag{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--brand);margin-bottom:8px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}
-.call{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;font-size:22px;font-weight:700;padding:14px 22px;border-radius:12px;margin:8px 0}
-.call.off{background:var(--line);color:var(--muted);font-size:16px}
-.muted{color:var(--muted)}.small{font-size:13px}
-.pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);white-space:nowrap}
-ol,ul{padding-left:20px}li{margin:6px 0}
-table{width:100%;border-collapse:collapse;font-size:15px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:13px;color:var(--muted);font-weight:600}
-td.k{white-space:nowrap;font-weight:600}
-.real{color:#047857;font-weight:600}.fict{color:#b45309;font-weight:600}.sim{color:#6d28d9;font-weight:600}
-@media (prefers-color-scheme:dark){.real{color:#34d399}.fict{color:#fbbf24}.sim{color:#c4b5fd}}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media (max-width:640px){.grid{grid-template-columns:1fr}td.k{white-space:normal}}
-footer{margin-top:48px;font-size:13px;color:var(--muted)}
+:root{--brand:#0f766e;--ink:#0f172a;--ink2:#334155;--muted:#64748b;--line:#e2e8f0;--bg:#ffffff;--soft:#f8fafc;--card:#ffffff;--tint:color-mix(in srgb,var(--brand) 9%,#fff);--bubble:#f1f5f9}
+@media (prefers-color-scheme:dark){:root{--ink:#e2e8f0;--ink2:#cbd5e1;--muted:#94a3b8;--line:#1e293b;--bg:#0b1120;--soft:#0f172a;--card:#111a2e;--tint:color-mix(in srgb,var(--brand) 18%,#0b1120);--bubble:#1e293b}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;font-size:16px}
+a{color:var(--brand)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:18px 0;gap:10px 12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
+.logo i{width:30px;height:30px;border-radius:9px;background:var(--brand);display:inline-block;position:relative}
+.logo i:after{content:"";position:absolute;inset:9px;border-radius:50%;border:2px solid #fff}
+.badge{font-size:12px;font-weight:600;color:var(--brand);background:var(--tint);border-radius:999px;padding:5px 11px;white-space:nowrap}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:36px 0 56px}
+h1{font-size:clamp(34px,5vw,52px);line-height:1.08;letter-spacing:-.03em;margin:0 0 18px;font-weight:800}
+h1 em{font-style:normal;color:var(--brand)}
+.lead{font-size:19px;color:var(--ink2);margin:0 0 28px;max-width:34em}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.btn{display:inline-flex;align-items:center;gap:10px;font:inherit;font-weight:600;font-size:17px;padding:14px 22px;border-radius:12px;text-decoration:none;cursor:pointer;border:1px solid transparent;transition:transform .1s ease,box-shadow .2s ease}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--brand);color:#fff;box-shadow:0 8px 24px color-mix(in srgb,var(--brand) 30%,transparent)}
+.btn.light{background:#fff;color:var(--brand)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn .dot{width:10px;height:10px;border-radius:50%;background:#fff;opacity:.9}
+.btn[data-state=connecting]{opacity:.8;cursor:progress}
+.btn[data-state=live]{background:#dc2626;box-shadow:0 8px 24px rgba(220,38,38,.3)}
+.btn[data-state=live] .dot{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:.4}}
+.fine{font-size:14px;color:var(--muted);margin:6px 0 0}
+.phone{background:var(--card);border:1px solid var(--line);border-radius:28px;padding:18px;box-shadow:0 30px 60px -20px rgba(15,23,42,.25)}
+.phone-top{display:flex;align-items:center;gap:10px;padding:4px 6px 14px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:700}
+.phone-top b{display:block;font-size:15px}.phone-top span{font-size:12px;color:#16a34a}
+.msg{max-width:88%;padding:9px 13px;border-radius:16px;margin:7px 0;font-size:14px;line-height:1.45}
+.msg.a{background:var(--bubble);border-bottom-left-radius:4px}
+.msg.c{background:var(--brand);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+.caption{font-size:12px;color:var(--muted);text-align:center;margin:10px 0 0}
+section{padding:64px 0}
+section.soft{background:var(--soft)}
+h2{font-size:clamp(26px,3.4vw,36px);letter-spacing:-.02em;line-height:1.15;margin:0 0 12px}
+.sub{color:var(--ink2);font-size:18px;margin:0 0 36px;max-width:40em}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px}
+.num{width:34px;height:34px;border-radius:10px;background:var(--tint);color:var(--brand);display:grid;place-items:center;font-weight:700;margin-bottom:14px}
+.card h3{margin:0 0 8px;font-size:18px}.card p{margin:0;color:var(--ink2)}
+.proof{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;align-items:start}
+.label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 10px}
+.mail{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#f6f7f9}
+.mail-head{background:#fff;color:#111;padding:12px 16px;border-bottom:1px solid #e5e7eb;font-size:13px}
+.mail-head b{display:block;font-size:14px}
+.mail iframe{display:block;width:100%;height:470px;border:0;pointer-events:none}
+.stack{display:grid;gap:20px}
+.event{border-left:4px solid var(--brand);background:var(--tint);border-radius:10px;padding:12px 14px;font-size:14px}
+.event b{display:block}
+.sumhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.tag{font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--bubble);color:var(--ink2);white-space:nowrap}
+.tag.ok{background:color-mix(in srgb,#16a34a 15%,transparent);color:#16a34a}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0 0 12px;font-size:14px}dt{color:var(--muted)}dd{margin:0}
+.sumtext{font-size:14px;color:var(--ink2);border-top:1px solid var(--line);padding-top:12px;margin:0}
+.try{counter-reset:t;list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.try li{counter-increment:t;display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.try li:before{content:counter(t);flex:none;width:26px;height:26px;border-radius:8px;background:var(--tint);color:var(--brand);display:grid;place-items:center;font-weight:700;font-size:14px}
+.get{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.ticks{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.ticks li{padding-left:28px;position:relative;color:var(--ink2)}
+.ticks li:before{content:"";position:absolute;left:0;top:6px;width:16px;height:9px;border-left:3px solid var(--brand);border-bottom:3px solid var(--brand);transform:rotate(-45deg)}
+.cta{background:var(--brand);color:#fff;border-radius:22px;padding:32px}
+.cta h3{font-size:24px;margin:0 0 10px}.cta p{margin:0 0 10px;opacity:.95}
+.cta .small{font-size:14px;opacity:.85}
+.menu{list-style:none;padding:0;margin:0}
+.menu li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.menu .price{font-weight:600;white-space:nowrap}.menu small{color:var(--muted);font-weight:400}
+.about{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;padding:0;margin:0;list-style:none}
+.about li{color:var(--ink2);font-size:15px}.about b{color:var(--ink)}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.pills a{border:1px solid var(--line);border-radius:999px;padding:8px 14px;text-decoration:none;color:var(--ink);font-weight:500;font-size:15px}
+footer{padding:36px 0 48px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+@media (max-width:860px){.hero,.proof,.get{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.about{grid-template-columns:1fr}.hero{gap:32px;padding-top:12px}section{padding:48px 0}.mail iframe{height:520px}}
+@media (max-width:420px){.wrap{padding:0 16px}.btn{width:100%;justify-content:center}.badge{font-size:11px}}
 </style>
 </head>
 <body>
-<main>
-<header>
-<span class="tag">Live demo, fictional dental clinic</span>
-<h1>Call Brightside Family Dental and book a appointment</h1>
-<p>Ava is an AI receptionist. It answers questions, books into a real Google Calendar, emails you a confirmation, takes a deposit by card (Stripe test mode) and sends the team a summary of every call.</p>
-<a class="call" href="tel:+19293721161">Call (929) 372-1161</a><p class="muted small">US number. Calls end after 5 minutes; a few dozen calls a day are accepted. No audio is recorded; your number, the transcript and the summary are seen by the operator of this demo, so use a test name and email if you prefer.</p>
-</header>
+<div class="wrap">
+<nav><div class="logo"><i></i>Brightside Family Dental</div><span class="badge">Live demo &middot; fictional dental clinic</span></nav>
 
-<section class="card">
-<h2 style="margin-top:0">Things to try</h2>
-<ol><li>Book a appointment: &quot;I&#39;d like a new patient exam and cleaning next week, in the morning.&quot;</li><li>Ask a question: &quot;Do you take Delta Dental?&quot; or &quot;How much is whitening?&quot;</li><li>Move or cancel it: give the four-character code from your confirmation email.</li><li>Say something urgent (for example &quot;knocked out&quot;): it stops booking and routes you to a person.</li><li>Ask for a time outside the hours, or one that is already taken.</li></ol>
+<div class="hero">
+<div>
+<h1>Every call answered.<br><em>Every appointment booked.</em></h1>
+<p class="lead">Ava is an AI receptionist for Brightside Family Dental. Ava picks up day and night, answers questions, books straight into the calendar and emails the patient a confirmation, so no caller hears voicemail.</p>
+<div class="btns"><a class="btn primary" href="tel:+19293721161">Call (929) 372-1161</a></div>
+<p class="fine" id="webcall-note">The phone number is a US number. Free to try; each call ends after 5 minutes.</p>
+</div>
+<div class="phone" aria-label="Example conversation">
+<div class="phone-top"><div class="avatar">A</div><div><b>Ava &middot; Brightside Family Dental</b><span>&#9679; Answering now</span></div></div>
+<div class="msg a">Thanks for calling Brightside Family Dental, this is Ava. How can I help you today?</div>
+<div class="msg c">Do you take Delta Dental?</div>
+<div class="msg a">We are in network with most PPO plans, including Delta Dental, Cigna, Aetna and MetLife. We do not take Medicaid.</div>
+<div class="msg c">Great. Can I get a new patient exam and cleaning on Tuesday morning?</div>
+<div class="msg a">Sure. I have 9:00 AM or 10:30 AM with Dr. Chen. Which works better?</div>
+<div class="msg c">9:00 AM, please.</div>
+<div class="msg a">You&#39;re all set for Tuesday at 9:00 AM. I&#39;ve emailed your confirmation with code K7QM. There&#39;s a $50 deposit to hold the time; the link is in that email.</div>
+<p class="caption">Example conversation. Yours will go wherever you take it.</p>
+</div>
+</div>
+</div>
+
+<section class="soft">
+<div class="wrap">
+<h2>What happens when someone calls</h2>
+<p class="sub">The same things a great front desk does, without the hold music.</p>
+<div class="steps">
+<div class="card"><div class="num">1</div><h3>Answers straight away</h3><p>Any hour, any day. Hours, prices, insurance, parking, policies: Ava answers from the business's own information and doesn't make things up.</p></div>
+<div class="card"><div class="num">2</div><h3>Books into the real calendar</h3><p>Checks what's actually free, offers times, and books. It never double-books, and it respects anything the team blocks out by hand. It can take a deposit by card to cut no-shows.</p></div>
+<div class="card"><div class="num">3</div><h3>Keeps everyone in the loop</h3><p>The patient gets a confirmation email with a code to change or cancel. The team gets a summary of every call. Anything urgent goes to a person.</p></div>
+</div>
+</div>
 </section>
 
-<h2>What is real and what is not</h2>
-<div class="card" style="padding:8px 12px">
-<table>
-<thead><tr><th>Part</th><th>Status</th><th>Detail</th></tr></thead>
-<tbody><tr><td class="k">Phone line, voice agent, speech</td><td class="real">Real</td><td>A real US number on Vapi, live since 7 Nov 2026. Calls are not recorded</td></tr><tr><td class="k">Calendar</td><td class="real">Real</td><td>Bookings land in a real Google Calendar, checked for clashes and for blocks typed in by hand</td></tr><tr><td class="k">Confirmation email</td><td class="real">Real</td><td>Sent to the address you give on the call, with your code</td></tr><tr><td class="k">Deposit</td><td class="real">Real, test mode</td><td>Stripe test mode: the page is real Stripe Checkout, no money moves (test card 4242 4242 4242 4242). New patient exam and cleaning $50, Teeth whitening $100.</td></tr><tr><td class="k">Call summary to CRM and team</td><td class="sim">Being connected</td><td>Summary is built; the CRM step is being connected</td></tr><tr><td class="k">Transfer to a person</td><td class="sim">Simulated</td><td>The business&#39;s numbers are fictional, so the agent says where it would connect you and flags the call instead</td></tr><tr><td class="k">Brightside Family Dental</td><td class="fict">Fictional</td><td>Name, address, staff, prices, phone numbers and policies are invented for this demo</td></tr></tbody>
-</table>
+<section>
+<div class="wrap">
+<h2>What lands in the inbox and the calendar</h2>
+<p class="sub">These are made by the same code that runs the live line, filled in with a sample booking.</p>
+<div class="proof">
+<div>
+<p class="label">The patient's confirmation email</p>
+<div class="mail"><div class="mail-head"><b>Brightside Family Dental: your appointment on Tuesday, November 10th at 9:00 AM</b>From Brightside Family Dental</div><iframe title="Confirmation email" sandbox="" tabindex="-1" loading="lazy" srcdoc="&lt;!doctype html&gt;&lt;html&gt;&lt;body style=&quot;margin:0;background:#f6f7f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111&quot;&gt;
+&lt;div style=&quot;max-width:520px;margin:24px auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb&quot;&gt;
+&lt;div style=&quot;background:#0f766e;color:#fff;padding:18px 22px;font-size:18px;font-weight:600&quot;&gt;Brightside Family Dental&lt;/div&gt;
+&lt;div style=&quot;padding:22px&quot;&gt;
+&lt;p style=&quot;margin:0 0 16px;font-size:16px&quot;&gt;Hi Sam Rivera, you are booked.&lt;/p&gt;
+&lt;table style=&quot;border-collapse:collapse;font-size:15px&quot;&gt;&lt;tr&gt;&lt;td style=&quot;padding:4px 14px 4px 0;color:#6b7280&quot;&gt;What&lt;/td&gt;&lt;td style=&quot;padding:4px 0&quot;&gt;New patient exam and cleaning&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:4px 14px 4px 0;color:#6b7280&quot;&gt;When&lt;/td&gt;&lt;td style=&quot;padding:4px 0&quot;&gt;Tuesday, November 10th at 9:00 AM (America/New York time)&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:4px 14px 4px 0;color:#6b7280&quot;&gt;With&lt;/td&gt;&lt;td style=&quot;padding:4px 0&quot;&gt;Dr. Lena Chen&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:4px 14px 4px 0;color:#6b7280&quot;&gt;Where&lt;/td&gt;&lt;td style=&quot;padding:4px 0&quot;&gt;1450 Example Avenue, Jersey City, New Jersey&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;padding:4px 14px 4px 0;color:#6b7280&quot;&gt;Code&lt;/td&gt;&lt;td style=&quot;padding:4px 0&quot;&gt;K7QM&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;p style=&quot;margin:22px 0&quot;&gt;&lt;a href=&quot;#&quot; style=&quot;background:#0f766e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;display:inline-block&quot;&gt;Pay $50 deposit&lt;/a&gt;&lt;/p&gt;
+&lt;p style=&quot;font-size:14px;color:#374151&quot;&gt;To change or cancel, call us and give your code K7QM.&lt;/p&gt;
+&lt;p style=&quot;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px;margin-top:20px&quot;&gt;Brightside Family Dental is a fictional business used to demonstrate an AI front desk. No real appointment exists, and the deposit link uses Stripe test mode (no real money; test card 4242 4242 4242 4242).&lt;/p&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div>
 </div>
+<div class="stack">
+<div><p class="label">The calendar entry</p><div class="event"><b>New patient exam and cleaning: Sam Rivera (Dr. Chen) [deposit due]</b>Tuesday, November 10th at 9:00 AM &middot; 60 min</div></div>
+<div><p class="label">The summary the team gets after the call</p><div class="card sumcard">
+<div class="sumhead"><b>Sam Rivera</b><span class="tag ok">Booked</span></div>
+<dl>
+<dt>Phone</dt><dd>(201) 555-0134</dd>
+<dt>Call</dt><dd>1 min 58 s</dd>
+<dt>Booked</dt><dd>New patient exam and cleaning, Tuesday, November 10th at 9:00 AM, Dr. Lena Chen <span class="tag">$50 deposit due</span></dd>
+<dt>Urgent?</dt><dd>No</dd>
+</dl>
+<p class="sumtext">Sam asked &quot;Do you take Delta Dental?&quot; and booked a new patient exam and cleaning with Dr. Chen on Tuesday at 9:00 AM. The $50 deposit link was sent by email.</p>
+</div></div>
+</div>
+</div>
+</div>
+</section>
 
-<h2>Case study: the front desk that never puts a caller on hold</h2>
+<section class="soft">
+<div class="wrap">
+<h2>Try it yourself</h2>
+<p class="sub">Call like a real patient would. A few ideas:</p>
+<ol class="try"><li>Book an appointment: &quot;I&#39;d like a new patient exam and cleaning next week, in the morning.&quot; Give your real email to get the confirmation.</li><li>Ask a question: &quot;Do you take Delta Dental?&quot; or &quot;How much is whitening?&quot;</li><li>Change your mind: call back, give the code from your email, and move or cancel it.</li><li>Try to trip it up: ask for a time when they&#39;re closed, or one that&#39;s already taken.</li><li>Say something urgent, like &quot;knocked out&quot;: it stops booking and gets you to a person.</li></ol>
+<div class="btns" style="margin-top:24px"><a class="btn primary" href="tel:+19293721161">Call (929) 372-1161</a></div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<h2>Want this for your business?</h2>
+<p class="sub">Brightside Family Dental is made up, but the receptionist is real and is set up from a business's own information. Here's the same one set up for other kinds of business:</p>
+<div class="pills" style="margin:-20px 0 32px"><a href="/demos/rapid-rooter-plumbing/">Plumbing company: Rapid Rooter Plumbing</a></div>
+<div class="get">
 <div class="card">
-<p><strong>The problem.</strong> A small dental clinic misses calls during busy hours and after closing. Each missed call is a booking that goes to a competitor, and staff spend the day on "are you open Saturday?" questions.</p>
-<p><strong>What was built.</strong> A phone agent that runs on the business's own data: one file with hours, team, services, prices and FAQ. It checks the real calendar before offering a time, refuses double bookings, books, moves and cancels, sends a confirmation with a code, takes a deposit through Stripe Checkout, and routes anything urgent to a person. The emergency check runs in code, not only in the prompt, so it does not depend on the model remembering a rule.</p>
-<p><strong>After the call.</strong> The team gets a summary: who called, what was booked, anything urgent, and anything that failed (for example an email that bounced), so nothing is lost.</p>
-<p><strong>Re-use.</strong> The same engine is re-skinned for another business from a short brief (name, services, hours, prices, FAQ) in minutes; a plumber gets job addresses and "burst pipe" routing, a dental clinic gets "knocked-out tooth" routing.</p>
+<h3 style="margin-bottom:14px">What you get</h3>
+<ul class="ticks">
+<li>Set up on your hours, services, prices, team and FAQs</li>
+<li>Bookings in your Google Calendar, with no double-booking</li>
+<li>Confirmation emails from your own domain</li>
+<li>Your rules for urgent calls and when to bring in a person</li>
+<li>A summary of every call to your inbox or CRM</li>
+<li>Deposits by card through Stripe, if you want them</li>
+<li>Tested on real calls before your customers hear it</li>
+</ul>
 </div>
-
-<div class="grid">
-<section class="card"><h2 style="margin-top:0">Services (fictional prices)</h2><ul><li><strong>New patient exam and cleaning</strong> $189 <span class="pill">$50 deposit</span></li><li><strong>Cleaning and checkup</strong> $129</li><li><strong>Emergency exam</strong> $95</li><li><strong>Filling</strong> $150 <span class="muted">(starting price, per tooth)</span></li><li><strong>Teeth whitening</strong> $399 <span class="pill">$100 deposit</span></li><li><strong>Clear aligner consultation</strong> free</li></ul></section>
-<section class="card"><h2 style="margin-top:0">Hours</h2><p>We are open Monday through Thursday from 8:00 AM to 6:00 PM, Friday from 8:00 AM to 3:00 PM, and Saturday from 9:00 AM to 2:00 PM. We are closed on Sunday.</p><p class="muted small">Times are America/New York time.</p></section>
+<div class="cta">
+<h3>Let's talk about your front desk</h3>
+<p>Send me your business name, roughly how many calls you get a week, and what usually goes wrong. I'll tell you what I'd set up and what it would cost to run.</p>
+<p class="small">Running cost is mainly the voice platform: about $0.13 a minute on this demo, paid to the platform directly.</p>
+<p style="margin-top:18px"><a class="btn light" href="https://www.upwork.com/freelancers/kabirm9" target="_blank" rel="noopener">Message me on Upwork</a></p>
 </div>
+</div>
+</div>
+</section>
 
-<footer>
-<p>Brightside Family Dental is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented. Do not use this line for a real medical or dental emergency; call 911.</p>
-</footer>
-</main>
+<section class="soft">
+<div class="wrap">
+<div class="get">
+<div><h2 style="font-size:24px">Services <small style="font-weight:500;color:var(--muted);font-size:15px">(sample prices)</small></h2><ul class="menu"><li><span>New patient exam and cleaning</span><span class="price">$189</span></li><li><span>Cleaning and checkup</span><span class="price">$129</span></li><li><span>Emergency exam</span><span class="price">$95</span></li><li><span>Filling</span><span class="price">$150 <small>starting price, per tooth</small></span></li><li><span>Teeth whitening</span><span class="price">$399</span></li><li><span>Clear aligner consultation</span><span class="price">Free</span></li></ul></div>
+<div><h2 style="font-size:24px">Hours</h2><p style="color:var(--ink2)">We are open Monday through Thursday from 8:00 AM to 6:00 PM, Friday from 8:00 AM to 3:00 PM, and Saturday from 9:00 AM to 2:00 PM. We are closed on Sunday.</p><p class="fine">America/New York time.</p></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<h2 style="font-size:24px">About this demo</h2>
+<ul class="about">
+<li><b>Real:</b> the phone line, the AI receptionist, the calendar it books into, and the emails it sends.</li>
+<li><b>Made up:</b> Brightside Family Dental itself. The name, address, team and prices are invented.</li>
+<li><b>Deposits</b> use Stripe's test mode, so no real money moves. Test card: 4242 4242 4242 4242.</li>
+<li><b>Transfers to a person</b> are simulated, because the business's own numbers are fictional.</li>
+<li><b>Calls aren't recorded.</b> I can see the transcript and summary, so use a made-up name if you like.</li>
+<li><b>Not for real emergencies.</b> For a medical or dental emergency, call 911.</li>
+</ul>
+</div>
+</section>
+
+<div class="wrap"><footer>Brightside Family Dental is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented. &middot; Built by Kabiir Labs.</footer></div>
+
+
 </body>
 </html>

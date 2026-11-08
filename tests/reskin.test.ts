@@ -38,12 +38,28 @@ describe("re-skin", () => {
     const b = plumber();
     const html = buildSite({ ...b, name: "<script>x</script>" }, { depositsOn: true, crmOn: false, phone: "+15125550123" });
     expect(html).not.toContain("<script>x");
-    expect(html).toContain("Fictional");
+    expect(html).toContain("Made up:");
     expect(html).toContain("tel:+15125550123");
     expect(html).not.toMatch(/sk_test|re_[A-Za-z0-9]{8}|whsec_/);
-    expect(html).toContain("on Vapi");
-    expect(html).toContain("not recorded");
+    expect(html).toContain("aren't recorded");
     expect(html).not.toContain("<audio");
+    expect(html).not.toMatch(/\b[Aa] (appointment|emergency|exam)\b/);
+    expect(html).not.toContain('id="webcall"');
+  });
+  it("the demo page shows the real email and summary, a browser call only with a public key, and links other demos", () => {
+    const b = plumber();
+    const html = buildSite(b, { depositsOn: true, crmOn: false, phone: "+15125550123", webCall: { publicKey: "pub-key-123", assistantId: "asst-1" }, otherDemos: [{ url: "/", name: "Brightside Family Dental", vertical: "dental clinic" }, { url: "/demos/x/", name: b.name, vertical: b.vertical }], nowMs: Date.UTC(2026, 10, 8, 12) });
+    expect(html).toContain('id="webcall"');
+    expect(html).toContain('"pub-key-123"');
+    expect(html).toContain("@vapi-ai/web@3.0.1");
+    expect(html).toContain("srcdoc=");
+    expect(html).toContain("Code");
+    expect(html).toContain("K7QM");
+    expect(html).toContain("Brightside Family Dental");
+    expect(html).not.toContain("example.invalid");
+    const other = buildSite(b, { depositsOn: false, crmOn: false, liveDemo: { url: "/", name: "Brightside Family Dental" }, nowMs: Date.UTC(2026, 10, 8, 12) });
+    expect(other).toContain('href="/"');
+    expect(other).not.toContain("tel:");
   });
 });
 

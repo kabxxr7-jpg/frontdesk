@@ -368,7 +368,7 @@ export function createApp(c: AppConfig): App {
     if (req.body.length > MAX_BODY) return json(413, { error: "too_large" });
     if (req.method === "GET" || req.method === "HEAD") {
       const html = c.sitePages?.[path.endsWith("/") ? path : `${path}/`];
-      if (html !== undefined) return { status: 200, headers: { ...HTML_H, "cache-control": "public, max-age=300" }, body: html };
+      if (html !== undefined) return { status: 200, headers: { ...HTML_H, "cache-control": "public, max-age=60" }, body: html };
     }
     if (path === "/healthz") return json(200, { ok: true, business: c.b.slug, calendar: c.calendar.kind, email: c.email.kind, deposits: Boolean(c.stripe), n8n: Boolean(c.n8n) });
     if (path === "/pay/done" && req.method === "GET") return page(c.b, "Deposit received", "<p>Thank you. Your deposit is being confirmed; you will get an email receipt shortly.</p>");
