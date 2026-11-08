@@ -15,10 +15,11 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 | Confirmation email (Resend) | **Real, verified 7 Nov 2026** | The caller's confirmation with the code arrived in a real inbox. Sent from Resend's shared test sender until the domain is verified |
 | Team summary after each call | **Real, verified 7 Nov 2026** | Vapi's end-of-call report produced one summary email to the team inbox |
 | Stripe deposit | **Real, test mode.** Checkout page verified 7 Nov 2026; the paid webhook is not yet verified on a live call | A booking opened a real Stripe Checkout session (test mode; live keys are refused). No money moves |
+| Browser call | **Real, verified 8 Nov 2026** | "Talk to Ava in your browser" on the demo page (Vapi web SDK, public key restricted to the site); tested on a phone on mobile data |
 | Call recordings | **Off** | Recording is switched off on the assistant; the demo is calling the line, not listening to a recording |
 | Retell | Built and tested in code, not funded | The same agent runs on Retell with `npm run retell:setup`; no Retell number was bought |
 | n8n to HubSpot / team email / GoHighLevel | Workflow written, not yet connected; GoHighLevel off (no trial account) | `deploy/n8n/` |
-| Hosting | The server runs on a Mac behind a named Cloudflare tunnel at desk.kabiirlabs.com (since 8 Nov 2026); the demo page is served by the same server. Down whenever the Mac is off | The droplet setup in `deploy/` is written but not used |
+| Hosting | The server runs on a Mac behind a named Cloudflare tunnel at kabiirlabs.com and desk.kabiirlabs.com (since 8 Nov 2026), started by launchd at login and restarted after a crash (`deploy/launchd/`). Down whenever the Mac is off or asleep | The droplet setup in `deploy/` is written but not used |
 | Transfers to a person | Simulated on the demo: the business's numbers are fictional, so the agent says where it would connect and flags the call | `TRANSFERS_LIVE=true` turns real transfers on |
 | The business | **Fictional.** Brightside Family Dental and Rapid Rooter Plumbing are invented: names, staff, prices, addresses, phone numbers | `briefs/` |
 
