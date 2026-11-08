@@ -63,11 +63,13 @@ export class GeminiModel implements ChatModel {
     this.apiKey = o.apiKey;
     // Flash-Lite by default: on 8 Nov 2026 it answered a tool call in about 1.3 s while the Flash models were
     // answering 503 "high demand" after up to 25 s. A chat visitor will not wait that long.
-    this.name = o.model ?? "gemini-flash-lite-latest";
-    this.models = [this.name, ...(o.fallbacks ?? ["gemini-3.5-flash-lite", "gemini-flash-latest"]).filter((m) => m !== this.name)];
+    this.name = o.model ?? "gemini-3.5-flash-lite";
+    this.models = [this.name, ...// Fast models only: measured 2026-11-08, flash-lite answers a tool call in about 0.7-1.2 s while the larger
+    // Flash models were overloaded (3-5 s or timing out), so they make poor fallbacks for a live chat.
+    (o.fallbacks ?? ["gemini-flash-lite-latest", "gemini-3.1-flash-lite"]).filter((m) => m !== this.name)];
     for (const m of this.models) if (!/^[a-z0-9.-]{3,60}$/.test(m)) throw new Error(`Gemini model name looks wrong: ${m}`);
     this.fetchFn = o.fetch ?? fetch;
-    this.timeoutMs = o.timeoutMs ?? 12_000;
+    this.timeoutMs = o.timeoutMs ?? 7_000;
     this.backoffMs = o.backoffMs ?? 700;
     this.sleep = o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
