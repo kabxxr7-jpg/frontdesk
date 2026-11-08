@@ -292,7 +292,7 @@ ${convo.map(([who, text]) => `<div class="msg ${who === "Caller" ? "c" : "a"}">$
 </div>
 </div>
 
-<section class="soft">
+<section id="how" class="soft">
 <div class="wrap">
 <h2>What happens when someone calls</h2>
 <p class="sub">The same things a great front desk does, without the hold music.</p>
@@ -304,7 +304,7 @@ ${convo.map(([who, text]) => `<div class="msg ${who === "Caller" ? "c" : "a"}">$
 </div>
 </section>
 
-<section>
+<section id="proof">
 <div class="wrap">
 <h2>What lands in the inbox and the calendar</h2>
 <p class="sub">These are made by the same code that runs the live line, filled in with a sample booking.</p>
@@ -330,7 +330,7 @@ ${summary.appointments.map((a) => `<dt>Booked</dt><dd>${e(`${a.service}, ${a.spo
 </div>
 </section>
 
-<section class="soft">
+<section id="try" class="soft">
 <div class="wrap">
 <h2>Try it yourself</h2>
 <p class="sub">Call like a real ${e(cw)} would. A few ideas:</p>
@@ -339,7 +339,7 @@ ${summary.appointments.map((a) => `<dt>Booked</dt><dd>${e(`${a.service}, ${a.spo
 </div>
 </section>
 
-<section>
+<section id="get">
 <div class="wrap">
 <h2>Want this for your business?</h2>
 <p class="sub">${e(b.name)} is made up, but the receptionist is real and is set up from a business's own information. ${others.length ? "Here's the same one set up for other kinds of business:" : ""}</p>
@@ -367,7 +367,7 @@ ${o.builderUrl ? `<p style="margin-top:18px"><a class="btn light" href="${e(o.bu
 </div>
 </section>
 
-<section class="soft">
+<section id="services" class="soft">
 <div class="wrap">
 <div class="get">
 <div><h2 style="font-size:24px">Services <small style="font-weight:500;color:var(--muted);font-size:15px">(sample prices)</small></h2><ul class="menu">${services}</ul></div>
@@ -376,7 +376,7 @@ ${o.builderUrl ? `<p style="margin-top:18px"><a class="btn light" href="${e(o.bu
 </div>
 </section>
 
-<section>
+<section id="about">
 <div class="wrap">
 <h2 style="font-size:24px">About this demo</h2>
 <ul class="about">
