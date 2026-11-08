@@ -33,6 +33,8 @@ export interface VapiOptions {
   model?: string;
   voiceId?: string;
   maxCallSeconds: number;
+  /** Text confirmations are configured: the agent offers them. */
+  sms?: boolean;
 }
 
 /** The assistant: prompt, tools (each pointing at /vapi with the shared secret), voice, limits, end-of-call report. */
@@ -46,7 +48,7 @@ export function buildVapiAssistant(b: Business, o: VapiOptions) {
       provider: "openai",
       model: o.model ?? "gpt-4.1",
       temperature: 0.2,
-      messages: [{ role: "system", content: buildPrompt(b, vapiVars(b.timezone)) }],
+      messages: [{ role: "system", content: buildPrompt(b, vapiVars(b.timezone), { sms: o.sms ?? false }) }],
       tools: [
         ...TOOL_DEFS.map((t) => ({
           type: "function",

@@ -32,6 +32,7 @@ export const TOOL_DEFS: { name: string; description: string; parameters: Record<
       customer_name: { type: "string", description: "First and last name." },
       phone: { type: "string", description: "Callback number. Omit to use the number they are calling from." },
       email: { type: "string", description: "For the confirmation email; spelled back and confirmed." },
+      sms_opt_in: { type: "boolean", description: "True only when the caller said yes to a text confirmation at their callback number." },
       address: { type: "string", description: "Job address, when the business needs one." },
       notes: { type: "string", description: "The reason for the visit, in the caller's words." },
       staff: { type: "string", description: "Only when the caller asked for a specific person." },
@@ -80,7 +81,7 @@ export function retellVars(tz: string): PromptVars {
   return { now: `{{current_time_${tz}}}`, calendar: `Next two weeks: {{current_calendar_${tz}}}`, caller: "{{user_number}}" };
 }
 
-export function buildPrompt(b: Business, vars: PromptVars = retellVars(b.timezone)): string {
+export function buildPrompt(b: Business, vars: PromptVars = retellVars(b.timezone), o: { sms?: boolean } = {}): string {
   const services = b.services.map((s) => `- ${renderServiceLine(s)}`).join("\n");
   const staff = b.staff.map((s) => `- ${s.name}, ${s.title}`).join("\n");
   const cw = b.agent.customerWord;
@@ -109,7 +110,7 @@ ${staff}
 ## Booking
 1. Ask what they need and pick the service. If unclear, ask.
 2. Call get_availability (use date_from/date_to for days they mention, worked out from the calendar above). Offer two or three of the returned times.
-3. When they choose: get first and last name; confirm the callback number (offer the number they are calling from); ${b.agent.collectAddress ? "get the address for the job; " : ""}ask for an email for the confirmation and have them spell it, then spell it back.
+3. When they choose: get first and last name; confirm the callback number (offer the number they are calling from); ${b.agent.collectAddress ? "get the address for the job; " : ""}ask for an email for the confirmation and have them spell it, then spell it back.${o.sms ? " Ask once whether they would also like a text confirmation to their callback number (it must be a mobile); set sms_opt_in to true only if they say yes." : ""}
 4. Read back service, day, time and name, then call book_appointment with the slot's exact start.
 5. Read the tool's message, including the confirmation code letter by letter.
 - If a tool says a time is taken or not possible, offer the alternatives it returns.

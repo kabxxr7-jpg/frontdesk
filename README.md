@@ -14,6 +14,8 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 | Google Calendar (service account) | **Real, verified 7 Nov 2026** | That call's booking created an event in the real calendar; an earlier signed test booking and its cancel also ran |
 | Confirmation email (Resend) | **Real, verified 7 Nov 2026; own domain since 8 Nov 2026** | The caller's confirmation with the code arrives from bookings@kabiirlabs.com (domain verified in Resend with DKIM and SPF); a test booking on 8 Nov landed in a Gmail inbox, not spam |
 | Team summary after each call | **Real, verified 7 Nov 2026** | Vapi's end-of-call report produced one summary email to the team inbox |
+| Text confirmation (Twilio) | Built and tested in code (mocked HTTP); live check pending | Sent on book, move and cancel when the caller says yes to texts; once per event; STOP honoured; a failed text never blocks the booking and is listed in the team summary. Off unless `TWILIO_*` is set |
+| Booking log (Airtable) | Built and tested in code (mocked HTTP); live check pending | One row per confirmation code, updated on book, move, deposit and cancel (upsert on Code). No names, phone numbers or emails. Off unless `AIRTABLE_*` is set |
 | Stripe deposit | **Real, test mode.** Checkout page verified 7 Nov 2026; the paid webhook is not yet verified on a live call | A booking opened a real Stripe Checkout session (test mode; live keys are refused). No money moves |
 | Browser call | **Real, verified 8 Nov 2026** | "Talk to Ava in your browser" on the demo page (Vapi web SDK, public key restricted to the site); tested on a phone on mobile data |
 | Call recordings | **Off** | Recording is switched off on the assistant; the demo is calling the line, not listening to a recording |
@@ -46,7 +48,7 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 
 ```bash
 npm ci
-npm test               # 161 tests
+npm test               # 182 tests
 npm run typecheck
 cp .env.example .env   # fill in; docs/ACCOUNTS.md has the click steps
 npm start
@@ -84,6 +86,13 @@ entries start `[Sample <slug>]`, and the preview card says "Your dental clinic".
 Cloudflare tunnel and `bot` for link-preview fetchers and scripts; those are left out of page opens. Calls come from
 Vapi's call list for the sample's assistant (counts and times only, never recordings or transcripts).
 
+## Text confirmations and the booking log
+
+Both are optional and off until their keys are in `.env` (see `.env.example`); the server says at startup which are on.
+
+- **Texts (Twilio Messaging API, no SDK).** The agent asks once whether the caller wants a text; only an explicit yes (`sms_opt_in`) sends one. Book, move and cancel each send one text with the code (and the deposit link when one is due), recorded in the same delivery ledger as the emails, so a retried tool call never texts twice. Numbers that reply STOP are never texted again: Twilio blocks them itself, error 21610 is remembered, and `POST /webhooks/twilio` (signature checked) records STOP and START. A failed text is logged against the call and shows in the team summary; the booking goes ahead either way.
+- **Booking log (Airtable REST API, no SDK).** `npm run airtable:setup` creates the Bookings table (Code, Service, Time, Staff, Status, Deposit, Source, Updated). Each booking, move, cancel and deposit payment upserts the row for that code (`performUpsert` on Code), so replays never duplicate it. Writes for one booking run in order and send the latest stored state. 429 and 5xx are retried. No names, phone numbers or emails go to Airtable, so the view can be shared.
+
 ## Deploy (droplet, optional)
 
 ```bash
@@ -101,7 +110,7 @@ Caddy serves the demo page on the domain, the server on `desk.<domain>` and n8n 
 | `briefs/` | Short business briefs (input to the re-skin) |
 | `businesses/<slug>/` | Generated: `business.json`, `prompt.md`, Vapi and Retell JSON, `site/index.html` |
 | `src/` | Server, Vapi adapter, tools, scheduler, SQLite store, Google Calendar, Resend, Stripe, post-call summary, re-skin, demo page |
-| `scripts/` | `serve.ts`, `reskin.ts`, `vapi-setup.ts`, `retell-setup.ts`, `check-live.ts`, `build-public.ts` |
+| `scripts/` | `serve.ts`, `reskin.ts`, `vapi-setup.ts`, `retell-setup.ts`, `airtable-setup.ts`, `check-live.ts`, `build-public.ts` |
 | `deploy/` | Caddyfile, droplet setup, push script, n8n workflow; `docker-compose.yml` at the root |
 | `docs/` | Account click steps, go-live runbook, vendor sources and costs |
 

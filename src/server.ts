@@ -5,6 +5,7 @@
 //   POST /webhooks/retell-inbound    call_inbound: rejects calls past the daily cap (bill protection)
 //   POST /vapi                       Vapi: tool-calls and end-of-call-report, shared secret header (or ?token=)
 //   POST /webhooks/stripe            checkout.session.completed, Stripe-Signature
+//   POST /webhooks/twilio            inbound texts (STOP / START), X-Twilio-Signature; only when Twilio is configured
 //   GET  /pay/<token>                creates or reuses a Stripe test-mode Checkout Session and redirects to it
 //   GET  /pay/done, /pay/cancelled   plain pages after Checkout
 // Business outcomes are HTTP 200 with a spoken-style message; 4xx only for malformed or unauthenticated requests.
@@ -16,7 +17,9 @@ import { escapeHtml, sendOnce, type EmailSender } from "./email.ts";
 import { CALL_ID, handleRetellWebhook } from "./postcall.ts";
 import { DEFAULT_TOLERANCE_MS, ReplayGuard, verifyRetellSignature } from "./signature.ts";
 import { readPayToken, verifyStripeSignature, type StripeClient } from "./stripe.ts";
-import { appointmentEmail, eventForAppointment, isToolName, runTool, type Deps } from "./tools.ts";
+import { appointmentEmail, eventForAppointment, isToolName, logBooking, runTool, type Deps } from "./tools.ts";
+import { keywordOf, setOptOut, verifyTwilioSignature, type SmsSender } from "./sms.ts";
+import type { BookingLog } from "./airtable.ts";
 import { usd } from "./text.ts";
 import { localYmd, spokenDateTime, zonedToUtc } from "./time.ts";
 import { isRecord } from "./validate.ts";
@@ -48,6 +51,10 @@ export interface AppConfig {
   sitePages?: Record<string, string>;
   /** Static files next to the demo pages (preview images), by path. */
   siteAssets?: Record<string, { type: string; data: Buffer }>;
+  /** Text-message confirmations; authToken verifies Twilio's inbound webhook (STOP / START). */
+  sms?: { sender: SmsSender; authToken?: string | undefined } | undefined;
+  /** Booking log (Airtable). */
+  bookingLog?: BookingLog | undefined;
 }
 
 export interface Req {
@@ -110,6 +117,8 @@ export function createApp(c: AppConfig): App {
   const deps: Deps = {
     b: c.b, db: c.db, calendar: c.calendar, email: c.email, publicBaseUrl: c.publicBaseUrl.replace(/\/+$/, ""), linkSecret: c.linkSecret,
     depositsEnabled: Boolean(c.stripe), transfersLive: c.transfersLive ?? false, replyTo: c.replyTo, log,
+    ...(c.sms ? { sms: c.sms.sender } : {}),
+    ...(c.bookingLog ? { bookingLog: c.bookingLog } : {}),
     ...(c.stripe ? { expireCheckout: (id: string) => (c.stripe as NonNullable<AppConfig["stripe"]>).client.expireCheckout(id) } : {}),
     background: (p) => {
       pending.add(p);
@@ -273,6 +282,7 @@ export function createApp(c: AppConfig): App {
         a.stripePaymentIntent = typeof obj["payment_intent"] === "string" ? obj["payment_intent"] : undefined;
         a.history.push({ atMs: clock(), callId: a.callId, action: "deposit_paid" });
         c.db.saveAppointment(a);
+        logBooking(deps, a.id, { nowMs: clock(), callId: a.callId });
         c.db.logTool({ callId: a.callId, atMs: clock(), tool: "stripe", ok: false, outcome: "refund_needed", note: `Deposit ${usd(a.depositUsd)} paid for ${a.code} AFTER it was cancelled: REFUND NEEDED (Stripe test mode).`, appointmentId: a.id });
         if (a.email) {
           const m = appointmentEmail(deps, a, "deposit_after_cancel");
@@ -298,6 +308,7 @@ export function createApp(c: AppConfig): App {
         a.stripePaymentIntent = typeof obj["payment_intent"] === "string" ? obj["payment_intent"] : undefined;
         a.history.push({ atMs: clock(), callId: a.callId, action: "deposit_paid" });
         c.db.saveAppointment(a);
+        logBooking(deps, a.id, { nowMs: clock(), callId: a.callId });
         if (a.calendarEventId && a.status === "booked") {
           try {
             await c.calendar.updateEvent(a.calendarEventId, eventForAppointment(deps, a));
@@ -367,6 +378,23 @@ export function createApp(c: AppConfig): App {
     }
   }
 
+  // Inbound texts to the Twilio number. Twilio already blocks further texts after STOP and sends its own reply; this
+  // keeps our list in step so we stop trying (and so START works again). The reply is empty TwiML.
+  function twilioWebhook(req: Req): Res {
+    const token = c.sms?.authToken;
+    if (!token) return json(404, { error: "not_found" });
+    const params = Object.fromEntries(new URLSearchParams(req.body.toString("utf8")));
+    const url = `${deps.publicBaseUrl}/webhooks/twilio`;
+    if (!verifyTwilioSignature(token, url, params, header(req, "x-twilio-signature"))) return json(401, { error: "unauthorized" });
+    const from = params["From"] ?? "";
+    const kw = keywordOf(params["Body"] ?? "");
+    if (/^\+[1-9]\d{6,14}$/.test(from) && kw) {
+      setOptOut(c.db, from, kw === "stop", clock(), "inbound_keyword");
+      log(`sms ${kw === "stop" ? "opt-out" : "opt-in"} recorded`);
+    }
+    return { status: 200, headers: { "content-type": "text/xml; charset=utf-8", "cache-control": "no-store" }, body: '<?xml version="1.0" encoding="UTF-8"?><Response></Response>' };
+  }
+
   async function handle(req: Req): Promise<Res> {
     const path = req.url.split("?")[0] ?? "/";
     if (req.body.length > MAX_BODY) return json(413, { error: "too_large" });
@@ -376,7 +404,7 @@ export function createApp(c: AppConfig): App {
       const asset = c.siteAssets?.[path];
       if (asset) return { status: 200, headers: { "content-type": asset.type, "cache-control": "public, max-age=3600" }, body: "", raw: asset.data };
     }
-    if (path === "/healthz") return json(200, { ok: true, business: c.b.slug, calendar: c.calendar.kind, email: c.email.kind, deposits: Boolean(c.stripe), n8n: Boolean(c.n8n) });
+    if (path === "/healthz") return json(200, { ok: true, business: c.b.slug, calendar: c.calendar.kind, email: c.email.kind, deposits: Boolean(c.stripe), n8n: Boolean(c.n8n), sms: c.sms?.sender.kind ?? "off", booking_log: c.bookingLog?.kind ?? "off" });
     if (path === "/pay/done" && req.method === "GET") return page(c.b, "Deposit received", "<p>Thank you. Your deposit is being confirmed; you will get an email receipt shortly.</p>");
     if (path === "/pay/cancelled" && req.method === "GET") return page(c.b, "Payment not completed", "<p>No payment was taken. You can use the link in your email again at any time.</p>");
     const payMatch = /^\/pay\/([A-Za-z0-9_.]{1,80})$/.exec(path);
@@ -388,6 +416,7 @@ export function createApp(c: AppConfig): App {
     if (path === "/webhooks/retell-inbound") return inbound(req);
     if (path === "/webhooks/stripe") return stripeWebhook(req);
     if (path === "/vapi") return vapi(req);
+    if (path === "/webhooks/twilio") return twilioWebhook(req);
     return json(404, { error: "not_found" });
   }
 

@@ -6,6 +6,8 @@ import { Db } from "../src/db.ts";
 import { MemoryEmail, ResendEmail, type EmailSender } from "../src/email.ts";
 import { createApp, createHttpServer, createRouter, type Tenant } from "../src/server.ts";
 import { StripeClient } from "../src/stripe.ts";
+import { TwilioSms } from "../src/sms.ts";
+import { AirtableLog } from "../src/airtable.ts";
 import { env, loadEnv } from "./env.ts";
 
 loadEnv();
@@ -44,6 +46,17 @@ const stripeHook = env("STRIPE_WEBHOOK_SECRET");
 const stripe = stripeKey && stripeHook ? { client: new StripeClient({ secretKey: stripeKey }), webhookSecret: stripeHook } : undefined;
 if (!stripe) console.error("deposits: off (STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET both needed)");
 
+// Text confirmations (Twilio) and the booking log (Airtable): each on only when all of its keys are set.
+const twSid = env("TWILIO_ACCOUNT_SID");
+const twToken = env("TWILIO_AUTH_TOKEN");
+const twFrom = env("TWILIO_FROM");
+const sms = twSid && twToken && twFrom ? { sender: new TwilioSms({ accountSid: twSid, authToken: twToken, from: twFrom }), authToken: twToken } : undefined;
+if (!sms) console.error("sms: off (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM all needed)");
+const atToken = env("AIRTABLE_TOKEN");
+const atBase = env("AIRTABLE_BASE_ID");
+const bookingLog = atToken && atBase ? new AirtableLog({ token: atToken, baseId: atBase, table: env("AIRTABLE_TABLE") ?? "Bookings" }) : undefined;
+if (!bookingLog) console.error("booking log: off (AIRTABLE_TOKEN and AIRTABLE_BASE_ID both needed)");
+
 const n8nUrl = env("N8N_WEBHOOK_URL");
 const n8nSecret = env("N8N_WEBHOOK_SECRET");
 const n8n = n8nUrl && n8nSecret ? { url: n8nUrl, secret: n8nSecret } : undefined;
@@ -70,7 +83,7 @@ for (const slug of existsSync("public/demos") ? readdirSync("public/demos") : []
 const app = createApp({
   sitePages,
   siteAssets,
-  b, db, calendar, email, stripe, n8n,
+  b, db, calendar, email, stripe, n8n, sms, bookingLog,
   retellApiKey: env("RETELL_API_KEY"),
   vapiSecret: env("VAPI_SERVER_SECRET"),
   publicBaseUrl: need("PUBLIC_BASE_URL"),
@@ -124,7 +137,7 @@ const port = Number(env("PORT") ?? "8080");
 const host = env("HOST") ?? "127.0.0.1";
 server.listen(port, host, () => {
   console.log(
-    `frontdesk for ${b.name}${tenants.size ? ` + ${tenants.size} prospect sample(s)` : ""} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"} | voice: ${[env("RETELL_API_KEY") ? "retell" : "", env("VAPI_SERVER_SECRET") ? "vapi" : ""].filter(Boolean).join("+")}`,
+    `frontdesk for ${b.name}${tenants.size ? ` + ${tenants.size} prospect sample(s)` : ""} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"} | sms: ${sms ? "on" : "off"} | booking log: ${bookingLog ? "airtable" : "off"} | voice: ${[env("RETELL_API_KEY") ? "retell" : "", env("VAPI_SERVER_SECRET") ? "vapi" : ""].filter(Boolean).join("+")}`,
   );
 });
 for (const sig of ["SIGINT", "SIGTERM"] as const) {

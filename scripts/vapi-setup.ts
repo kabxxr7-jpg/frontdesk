@@ -32,6 +32,7 @@ const body = buildVapiAssistant(b, {
   serverUrl: `${base}/vapi`,
   secret,
   maxCallSeconds: Number(env("MAX_CALL_SECONDS") ?? "300"),
+  sms: Boolean(env("TWILIO_ACCOUNT_SID") && env("TWILIO_AUTH_TOKEN") && env("TWILIO_FROM")),
   ...(env("VAPI_MODEL") ? { model: env("VAPI_MODEL") as string } : {}),
   ...(env("VAPI_VOICE_ID") ? { voiceId: env("VAPI_VOICE_ID") as string } : {}),
 });

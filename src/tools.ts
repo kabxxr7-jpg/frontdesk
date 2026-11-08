@@ -6,6 +6,8 @@ import type { Calendar, CalendarEventInput } from "./calendar.ts";
 import type { Appointment, Db } from "./db.ts";
 import { escapeHtml, normalizeSpokenEmail, sendOnce, type EmailSender } from "./email.ts";
 import { payToken } from "./stripe.ts";
+import { KeyedQueue, depositOf, sourceOf, statusOf, type BookingLog, type BookingRow } from "./airtable.ts";
+import { gsmSafe, isPermanent, sendSmsOnce, type SmsSender } from "./sms.ts";
 import { formatPhone, joinList, looksLikeAdvice, matchFaq, renderHours, renderTokens, usd } from "./text.ts";
 import { addDays, compareYmd, daysBetween, localYmd, spokenDate, spokenDateTime, toIsoWithOffset, weekdayName, type Ymd } from "./time.ts";
 import { checkSlot, closedDateInfo, findSlots, instantOf, isOpenAt, nearestSlots, type Busy, type Slot, type SlotCheck } from "./scheduler.ts";
@@ -29,6 +31,10 @@ export interface Deps {
   /** Real transfers only when the business's numbers can be dialled (not fictional 555 numbers). */
   transfersLive: boolean;
   replyTo?: string | undefined;
+  /** Text-message confirmations (Twilio); off when unset. */
+  sms?: SmsSender | undefined;
+  /** Booking log (Airtable); off when unset. */
+  bookingLog?: BookingLog | undefined;
   log?: (line: string) => void;
   /** Overrides for the calendar time budgets (tests). */
   calendarBudgetMs?: { busy: number; write: number };
@@ -401,6 +407,95 @@ function emailCaller(d: Deps, a: Appointment, kind: EmailKind, call: ToolCall): 
 
 export { emailCaller as sendAppointmentEmail };
 
+// ---------------------------------------------------------------- texts to the caller (Twilio)
+
+export type SmsKind = "booked" | "rescheduled" | "cancelled";
+
+export function appointmentSms(d: Deps, a: Appointment, kind: SmsKind): string {
+  const b = d.b;
+  const who = isAnonymous(b) ? sampleSender(b) : b.name;
+  const sv = serviceOf(d, a.serviceId);
+  const st = staffOf(d, a.staffId);
+  const when = spokenDateTime(a.startUtc, b.timezone);
+  const head = {
+    booked: `${who}: you're booked. ${sv.name}, ${when} with ${st.short}. Code ${a.code}.`,
+    rescheduled: `${who}: your ${b.agent.visitWord} moved to ${when} with ${st.short}. Code ${a.code}.`,
+    cancelled: `${who}: your ${b.agent.visitWord} on ${when} is cancelled (code ${a.code}).`,
+  }[kind];
+  const deposit = kind !== "cancelled" && a.depositStatus === "due" && d.depositsEnabled ? ` Deposit ${usd(a.depositUsd)}: ${payUrl(d, a)}` : "";
+  const demo = b.fictional || b.prospect ? " (Demo, not a real booking.)" : "";
+  return gsmSafe(`${head}${deposit}${demo} Reply STOP to opt out.`);
+}
+
+/** Texts the caller when they opted in. Never blocks the booking; failures go to the tool log (and the team summary). */
+function textCaller(d: Deps, a: Appointment, kind: SmsKind, call: ToolCall): void {
+  if (!d.sms || !a.smsOptIn) return;
+  const sms = d.sms;
+  const body = appointmentSms(d, a, kind);
+  // The number is part of the key; a move to a new time is a new event.
+  const key = `${a.id}:${kind}:${kind === "rescheduled" ? a.startUtc : ""}:${a.phone}`;
+  const note = (n: string, ok: boolean, outcome: string) => {
+    if (call.callId) d.db.logTool({ callId: call.callId, atMs: Date.now(), tool: "sms", ok, outcome, note: n, appointmentId: a.id });
+  };
+  bg(
+    d,
+    sendSmsOnce(d.db, sms, { to: a.phone, body, idempotencyKey: key }, call.nowMs).then(
+      (r) => {
+        if (r === "sent") note(`${kind} text sent to the caller.`, true, "ok");
+        else if (r === "opted_out") note(`${kind} text not sent: the number replied STOP earlier.`, true, "sms_opted_out");
+      },
+      (err: unknown) => {
+        const why = err instanceof Error ? err.message.slice(0, 160) : "unknown";
+        note(`${kind} text to the caller FAILED: ${why}.${isPermanent(err) ? " The number cannot receive texts from this line." : ""}`, false, "sms_failed");
+        throw err;
+      },
+    ),
+  );
+}
+
+// ---------------------------------------------------------------- booking log (Airtable)
+
+export function bookingRow(d: Deps, a: Appointment, nowMs: number): BookingRow {
+  return {
+    Code: a.code,
+    Service: serviceOf(d, a.serviceId).name,
+    Time: toIsoWithOffset(a.startUtc, d.b.timezone),
+    Staff: staffOf(d, a.staffId).name,
+    Status: statusOf(a),
+    Deposit: depositOf(a),
+    Source: sourceOf(a.callId),
+    Updated: new Date(nowMs).toISOString(),
+  };
+}
+
+const logQueues = new WeakMap<Db, KeyedQueue>();
+
+/**
+ * Upserts the appointment's row. Writes for one appointment run in order and each reads the latest stored state,
+ * so the row always ends on the newest status. Failures are logged against the call and never reach the caller.
+ */
+export function logBooking(d: Deps, appointmentId: string, call: { nowMs: number; callId?: string | undefined }): void {
+  if (!d.bookingLog) return;
+  const sink = d.bookingLog;
+  let q = logQueues.get(d.db);
+  if (!q) logQueues.set(d.db, (q = new KeyedQueue()));
+  bg(
+    d,
+    q.run(appointmentId, async () => {
+      const a = d.db.getAppointment(appointmentId);
+      if (!a) return;
+      try {
+        await sink.upsert(bookingRow(d, a, Date.now()));
+      } catch (err) {
+        const why = err instanceof Error ? err.message.slice(0, 160) : "unknown";
+        const callId = call.callId ?? a.callId;
+        d.db.logTool({ callId, atMs: Date.now(), tool: "airtable", ok: false, outcome: "log_failed", note: `Booking log row for ${a.code} FAILED: ${why}.`, appointmentId: a.id });
+        throw err;
+      }
+    }),
+  );
+}
+
 // ---------------------------------------------------------------- tools
 
 async function lookupFaq(d: Deps, args: Record<string, unknown>, call: ToolCall): Promise<ToolOutput> {
@@ -510,6 +605,9 @@ async function bookAppointment(d: Deps, args: Record<string, unknown>, call: Too
   if (isFailure(stIn)) return stIn;
   const emailRaw = readText(args, "email", { label: "the email address", max: 120 });
   if (isFailure(emailRaw)) return emailRaw;
+  // Only an explicit yes counts as consent to texts.
+  const smsRaw = args["sms_opt_in"];
+  const smsOptIn = smsRaw === true || (typeof smsRaw === "string" && /^(true|yes)$/i.test(smsRaw.trim()));
 
   const guard = emergencyGuard(d, call, "book_appointment", [notesIn.value, sIn.value]);
   if (guard) return guard;
@@ -554,12 +652,18 @@ async function bookAppointment(d: Deps, args: Record<string, unknown>, call: Too
       again.email = email;
       changed = true;
     }
+    const newSms = smsOptIn && !again.smsOptIn;
+    if (newSms) {
+      again.smsOptIn = true;
+      changed = true;
+    }
     if (changed) {
       again.updatedAtMs = call.nowMs;
       d.db.saveAppointment(again);
       bg(d, syncCalendar(d, again));
     }
     if (newEmail) emailCaller(d, again, "booked", call);
+    if (newSms) textCaller(d, again, "booked", call);
     const out: ToolOutput = {
       ok: true, already_booked: true, appointment: appointmentView(d, again),
       message: `You are booked for ${spokenDateTime(again.startUtc, b.timezone)}. Your code is ${spellCode(again.code)}.${newEmail ? ` I am sending the details to ${email}.` : ""}`,
@@ -583,7 +687,7 @@ async function bookAppointment(d: Deps, args: Record<string, unknown>, call: Too
   const deposit = d.depositsEnabled && service.depositUsd && service.depositUsd > 0 ? service.depositUsd : 0;
   const a: Appointment = {
     id: d.db.newAppointmentId(), code: d.db.newCode(), callId: call.callId, staffId: check.staff.id, serviceId: service.id,
-    startUtc, endUtc: check.endUtc, customerName: name, phone: phone as string, email, address: addrIn.value, notes: notesIn.value,
+    startUtc, endUtc: check.endUtc, customerName: name, phone: phone as string, email, ...(smsOptIn ? { smsOptIn: true } : {}), address: addrIn.value, notes: notesIn.value,
     status: "booked", createdAtMs: call.nowMs, updatedAtMs: call.nowMs, calendarStatus: "none",
     depositUsd: deposit, depositStatus: deposit > 0 ? "due" : "none", history: [{ atMs: call.nowMs, callId: call.callId, action: "booked" }],
   };
@@ -603,11 +707,15 @@ async function bookAppointment(d: Deps, args: Record<string, unknown>, call: Too
   const synced = await within(sync, d.calendarBudgetMs?.write ?? CALENDAR_WRITE_BUDGET_MS, "pending" as const);
   const calendarOk = synced !== false;
   emailCaller(d, a, "booked", call);
+  textCaller(d, a, "booked", call);
+  logBooking(d, a.id, call);
   const when = spokenDateTime(startUtc, b.timezone);
   const parts = [`You are booked for ${service.name.toLowerCase()} on ${when} with ${check.staff.short}.`, `Your confirmation code is ${spellCode(a.code)}.`];
   if (email) parts.push(`I am sending the details to ${email}${deposit > 0 ? `, with a link to pay the ${usd(deposit)} deposit that holds your time` : ""}.`);
   else if (deposit > 0) parts.push(`There is a ${usd(deposit)} deposit to hold the time; with an email address I can send you the payment link.`);
-  const out: ToolOutput = { ok: true, appointment: appointmentView(d, a), calendar: synced === true ? "synced" : synced === "pending" ? "pending" : "failed", email_queued: Boolean(email), message: parts.join(" ") };
+  const texting = Boolean(d.sms && smsOptIn);
+  if (texting) parts.push(`I am also texting the details to ${formatPhone(a.phone)}.`);
+  const out: ToolOutput = { ok: true, appointment: appointmentView(d, a), calendar: synced === true ? "synced" : synced === "pending" ? "pending" : "failed", email_queued: Boolean(email), sms_queued: texting, message: parts.join(" ") };
   log(d, call, "book_appointment", out, `Booked ${service.name} ${when} with ${check.staff.short} for ${name}, code ${a.code}${calendarOk ? "" : " (CALENDAR SYNC FAILED: add it by hand)"}.`, { appointmentId: a.id });
   return out;
 }
@@ -697,9 +805,11 @@ async function finishReschedule(d: Deps, a: Appointment, from: { start: number; 
   bg(d, sync);
   const calendarOk = (await within(sync, d.calendarBudgetMs?.write ?? CALENDAR_WRITE_BUDGET_MS, "pending" as const)) !== false;
   emailCaller(d, a, "rescheduled", call);
+  textCaller(d, a, "rescheduled", call);
+  logBooking(d, a.id, call);
   const out: ToolOutput = {
     ok: true, appointment: appointmentView(d, a), calendar: calendarOk ? "synced" : "failed",
-    message: `Done. Your ${service.name.toLowerCase()} is now on ${spokenDateTime(newStart, b.timezone)} with ${check.staff.short}.${a.email ? " I have emailed you the new time." : ""}`,
+    message: `Done. Your ${service.name.toLowerCase()} is now on ${spokenDateTime(newStart, b.timezone)} with ${check.staff.short}.${a.email ? " I have emailed you the new time." : ""}${d.sms && a.smsOptIn ? " You will get a text too." : ""}`,
   };
   log(d, call, "reschedule_appointment", out, `Moved ${a.code} from ${spokenDateTime(from.start, b.timezone)} to ${spokenDateTime(newStart, b.timezone)}${calendarOk ? "" : " (CALENDAR SYNC FAILED)"}.`, { appointmentId: a.id });
   return out;
@@ -733,6 +843,8 @@ async function cancelAppointment(d: Deps, args: Record<string, unknown>, call: T
   bg(d, sync);
   const calendarOk = (await within(sync, d.calendarBudgetMs?.write ?? CALENDAR_WRITE_BUDGET_MS, "pending" as const)) !== false;
   emailCaller(d, a, "cancelled", call);
+  textCaller(d, a, "cancelled", call);
+  logBooking(d, a.id, call);
   const fee = late && b.policies.lateCancelFeeUsd > 0 ? ` Because it is less than ${b.policies.cancellationNoticeHours} hours away, a late fee of ${usd(b.policies.lateCancelFeeUsd)} may apply; the team will confirm.` : "";
   const deposit = a.depositStatus === "paid" ? " The team will be in touch about your deposit." : "";
   const out: ToolOutput = { ok: true, appointment: appointmentView(d, a), late_cancellation: late, message: `Your ${b.agent.visitWord} on ${spokenDateTime(a.startUtc, b.timezone)} is cancelled.${fee}${deposit} Would you like to book another time?` };

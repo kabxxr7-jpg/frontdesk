@@ -15,6 +15,7 @@
     "retell:setup": "node scripts/retell-setup.ts",
     "check:live": "node scripts/check-live.ts",
     "vapi:setup": "node scripts/vapi-setup.ts",
+    "airtable:setup": "node scripts/airtable-setup.ts",
     "build:public": "node scripts/build-public.ts",
     "og": "node scripts/og-image.ts",
     "prospect": "node scripts/prospect.ts",

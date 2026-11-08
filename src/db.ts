@@ -26,6 +26,8 @@ export interface Appointment {
   /** E.164 */
   phone: string;
   email?: string | undefined;
+  /** The caller said yes to text-message confirmations at `phone`. */
+  smsOptIn?: boolean | undefined;
   address?: string | undefined;
   notes?: string | undefined;
   status: "booked" | "cancelled";
