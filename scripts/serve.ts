@@ -82,6 +82,14 @@ const addAssets = (dir: string, prefix: string): void => {
 addAssets("public", "/");
 for (const slug of existsSync("public/demos") ? readdirSync("public/demos") : []) addAssets(`public/demos/${slug}`, `/demos/${slug}/`);
 
+// App API (/api/v1/): CORS only for our own pages; the web call lives on the demo page at SITE_URL.
+const siteUrl = (env("SITE_URL") ?? need("PUBLIC_BASE_URL")).replace(/\/+$/, "");
+const appApi = (pagePath: string) => ({
+  webCallUrl: `${siteUrl}${pagePath}`,
+  allowedOrigins: [need("PUBLIC_BASE_URL"), env("SITE_URL") ?? ""].filter(Boolean),
+  maxBookingsPerDay: Number(env("APP_BOOKINGS_PER_DAY") ?? "40"),
+});
+
 const app = createApp({
   sitePages,
   siteAssets,
@@ -96,6 +104,7 @@ const app = createApp({
   replyTo: env("REPLY_TO"),
   transfersLive: env("TRANSFERS_LIVE") === "true",
   maxCallsPerDay: Number(env("MAX_CALLS_PER_DAY") ?? "40"),
+  api: appApi("/"),
   log: (l) => console.log(`${new Date().toISOString()} ${l}`),
 });
 // Samples built for prospects (npm run prospect): each gets its own bookings database and answers under /t/<slug>/.
@@ -128,6 +137,7 @@ for (const slug of existsSync("prospects") ? readdirSync("prospects") : []) {
         replyTo: env("REPLY_TO"),
         transfersLive: false,
         maxCallsPerDay: Number(env("MAX_CALLS_PER_DAY") ?? "40"),
+        api: appApi(`/demos/${slug}/`),
         log: (l) => console.log(`${new Date().toISOString()} [${slug}] ${l}`),
       }),
     });

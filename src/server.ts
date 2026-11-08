@@ -8,7 +8,9 @@
 //   GET  /pay/<token>                creates or reuses a Stripe test-mode Checkout Session and redirects to it
 //   GET  /pay/done, /pay/cancelled   plain pages after Checkout
 //   POST /chat                       website chat (text version of the receptionist, same tools), see chat.ts
+//   /api/v1/...                      public JSON API for the patient app (business, availability, appointments), see api.ts
 // Business outcomes are HTTP 200 with a spoken-style message; 4xx only for malformed or unauthenticated requests.
+import { API_PREFIX, createApi, type ApiConfig } from "./api.ts";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { Business } from "./business.ts";
 import type { Calendar } from "./calendar.ts";
@@ -52,6 +54,8 @@ export interface AppConfig {
   siteAssets?: Record<string, { type: string; data: Buffer }>;
   /** Website chat (POST /chat). Off when not set. */
   chat?: ChatConfig | undefined;
+  /** App API (/api/v1/): the web call page, CORS origins, the daily cap on app bookings. Always on. */
+  api?: ApiConfig | undefined;
 }
 
 export interface Req {
@@ -122,6 +126,7 @@ export function createApp(c: AppConfig): App {
   };
   const guard = new ReplayGuard({ toleranceMs: DEFAULT_TOLERANCE_MS });
   const chat = c.chat ? new Chat(deps, c.chat, clock) : undefined;
+  const api = createApi(deps, clock, { maxBookingsPerDay: c.maxCallsPerDay, ...c.api });
 
   function verifyRetell(req: Req): { ok: true; digest: string } | { ok: false; res: Res } {
     if (!retellKey) return { ok: false, res: json(404, { error: "not_found" }) };
@@ -389,6 +394,7 @@ export function createApp(c: AppConfig): App {
       const asset = c.siteAssets?.[path];
       if (asset) return { status: 200, headers: { "content-type": asset.type, "cache-control": "public, max-age=3600" }, body: "", raw: asset.data };
     }
+    if (path.startsWith(API_PREFIX)) return api.handle(req, path);
     if (path === "/healthz") return json(200, { ok: true, business: c.b.slug, calendar: c.calendar.kind, email: c.email.kind, deposits: Boolean(c.stripe), n8n: Boolean(c.n8n) });
     if (path === "/pay/done" && req.method === "GET") return page(c.b, "Deposit received", "<p>Thank you. Your deposit is being confirmed; you will get an email receipt shortly.</p>");
     if (path === "/pay/cancelled" && req.method === "GET") return page(c.b, "Payment not completed", "<p>No payment was taken. You can use the link in your email again at any time.</p>");

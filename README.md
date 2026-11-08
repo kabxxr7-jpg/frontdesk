@@ -87,6 +87,26 @@ entries start `[Sample <slug>]`, and the preview card says "Your dental clinic".
 Cloudflare tunnel and `bot` for link-preview fetchers and scripts; those are left out of page opens. Calls come from
 Vapi's call list for the sample's assistant (counts and times only, never recordings or transcripts).
 
+## App API
+
+A small public JSON API for a patient app (`src/api.ts`), a thin layer over the same tools. Base `${PUBLIC_BASE_URL}/api/v1`
+(a sample answers the same paths under `/t/<slug>/api/v1`).
+
+| Endpoint | What |
+|---|---|
+| `GET /api/v1/healthz` | Liveness |
+| `GET /api/v1/business` | Name, hours, closed dates, services, staff, rendered FAQ, policies (no phone numbers, no urgent rules); cached 60 s |
+| `GET /api/v1/availability?service=&date_from=&date_to=&staff=&part_of_day=` | Every free slot in the range (up to 60) |
+| `POST /api/v1/appointments` | Book (`email` and `phone` required); `Idempotency-Key` replays the first result for 24 h |
+| `POST /api/v1/appointments/lookup` | `{ code, email }`: both must match, or 404 |
+| `POST /api/v1/appointments/reschedule` | `{ code, email, new_start }` |
+| `POST /api/v1/appointments/cancel` | `{ code, email }` |
+
+Errors are `{ error, message, field?, alternatives? }` (400 input, 404 no match, 409 slot taken or cancelled, 422 slot
+problem or emergency, 429 with `Retry-After`). No auth, so limits per IP: 60 reads a minute, 10 changes an hour, 5
+failed code+email checks per 15 minutes; and `APP_BOOKINGS_PER_DAY` (default 40) app bookings a day. Phone numbers and
+emails are never returned. CORS only for `PUBLIC_BASE_URL` and `SITE_URL`.
+
 ## Deploy (droplet, optional)
 
 ```bash

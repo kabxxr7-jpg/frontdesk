@@ -42,6 +42,8 @@ export interface ToolCall {
   nowMs: number;
   callId?: string | undefined;
   fromNumber?: string | undefined;
+  /** App API: get_availability returns every free slot in the range (up to 60) instead of the spoken spread. */
+  allSlots?: boolean | undefined;
 }
 
 export type ToolOutput = { ok: boolean; message: string; [key: string]: unknown };
@@ -429,6 +431,9 @@ async function lookupFaq(d: Deps, args: Record<string, unknown>, call: ToolCall)
   return out;
 }
 
+/** The most slots get_availability returns with `allSlots` (the app's day picker). */
+export const ALL_SLOTS_CAP = 60;
+
 async function getAvailability(d: Deps, args: Record<string, unknown>, call: ToolCall): Promise<ToolOutput> {
   const b = d.b;
   const sIn = readText(args, "service", { label: "the service", max: 80 });
@@ -465,15 +470,18 @@ async function getAvailability(d: Deps, args: Record<string, unknown>, call: Too
     slots = findSlots(b, d.db, { from: addDays(to, 1), to: to2, service, staffId: staff?.id, partOfDay, nowMs: call.nowMs, busy: [...busy, ...extra.busy] });
     widened = true;
   }
-  // Spread the offer: at most 2 per day, 6 in all, so the caller hears a choice of days.
+  // Spread the offer: at most 2 per day, 6 in all, so the caller hears a choice of days. The app shows a day picker
+  // and gets every slot (capped).
+  const perDayMax = call.allSlots ? Infinity : 2;
+  const totalMax = call.allSlots ? ALL_SLOTS_CAP : 6;
   const perDay = new Map<string, number>();
   const offer: Slot[] = [];
   for (const s of slots) {
     const k = JSON.stringify(localYmd(s.startUtc, b.timezone));
-    if ((perDay.get(k) ?? 0) >= 2) continue;
+    if ((perDay.get(k) ?? 0) >= perDayMax) continue;
     perDay.set(k, (perDay.get(k) ?? 0) + 1);
     offer.push(s);
-    if (offer.length >= 6) break;
+    if (offer.length >= totalMax) break;
   }
   const closed = fromIn.value && compareYmd(from, to) === 0 ? closedDateInfo(b, from) : undefined;
   let message: string;
@@ -486,6 +494,7 @@ async function getAvailability(d: Deps, args: Record<string, unknown>, call: Too
     ok: true, service: { id: service.id, name: service.name, duration_minutes: service.durationMinutes, price_usd: service.priceUsd, deposit_usd: service.depositUsd ?? 0 },
     today: toIsoWithOffset(call.nowMs, b.timezone).slice(0, 10), slots: offer.map((s) => slotView(d, s)), message,
     ...(calendarOk ? {} : { calendar_note: "calendar unreachable; offered times come from bookings made by phone only" }),
+    ...(call.allSlots ? { widened, closed: closed ?? null } : {}),
   };
   log(d, call, "get_availability", out, `Availability for ${service.name}: ${offer.length} offered.`);
   return out;

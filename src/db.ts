@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS calls (call_id TEXT PRIMARY KEY, doc TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS events (key TEXT PRIMARY KEY, state TEXT NOT NULL, at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS deliveries (key TEXT PRIMARY KEY, at INTEGER NOT NULL, ref TEXT);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS api_idempotency (key TEXT PRIMARY KEY, at INTEGER NOT NULL, request_hash TEXT NOT NULL, status INTEGER NOT NULL, body TEXT NOT NULL);
 `;
 
 const CODE_ALPHABET = "ACDEFGHJKMNPQRTUVWXY34679"; // no 0/O, 1/I/L, 2/Z, 5/S, 8/B: easy to read aloud
@@ -242,6 +243,28 @@ export class Db {
   releaseStaleClaims(nowMs: number, maxAgeMs = 120_000): number {
     const r = this.sql.prepare("DELETE FROM events WHERE state = 'in_flight' AND at < ?").run(nowMs - maxAgeMs);
     return Number(r.changes);
+  }
+
+  /** Events whose key starts with `prefix`, recorded at or after sinceMs (app bookings per day). */
+  countEventsSince(prefix: string, sinceMs: number): number {
+    const row = this.sql.prepare("SELECT COUNT(*) AS n FROM events WHERE key >= ? AND key < ? AND at >= ?").get(prefix, `${prefix}\uffff`, sinceMs) as { n: number };
+    return Number(row.n);
+  }
+
+  // ---- app API idempotency keys (POST /api/v1/appointments)
+
+  getIdempotent(key: string, sinceMs: number): { requestHash: string; status: number; body: string } | undefined {
+    const row = this.sql.prepare("SELECT request_hash, status, body FROM api_idempotency WHERE key = ? AND at >= ?").get(key, sinceMs) as
+      | { request_hash: string; status: number; body: string }
+      | undefined;
+    return row ? { requestHash: row.request_hash, status: Number(row.status), body: row.body } : undefined;
+  }
+
+  saveIdempotent(key: string, nowMs: number, requestHash: string, status: number, body: string): void {
+    this.sql.prepare("DELETE FROM api_idempotency WHERE at < ?").run(nowMs - 86_400_000);
+    this.sql
+      .prepare("INSERT INTO api_idempotency (key, at, request_hash, status, body) VALUES (?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET at=excluded.at, request_hash=excluded.request_hash, status=excluded.status, body=excluded.body")
+      .run(key, nowMs, requestHash, status, body);
   }
 
   // ---- delivery ledger
