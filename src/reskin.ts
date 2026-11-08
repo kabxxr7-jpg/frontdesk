@@ -28,8 +28,12 @@ export interface Brief {
   minLeadMinutes?: number;
   /** Questions the demo page suggests ("Do you take Delta Dental?"). */
   tryQuestions?: string[];
-  /** A sample for a prospect's job post: which details are placeholders (e.g. "prices", "team names", "hours"). */
-  prospect?: { placeholders?: string[] };
+  /**
+   * A sample for a prospect's job post: which details are placeholders (e.g. "prices", "team names", "hours").
+   * anonymous: the post hides the business name. `name` is then only an internal label (e.g. "Your clinic"):
+   * the greeting, page, emails, calendar and preview card say "your <vertical>" and never show it.
+   */
+  prospect?: { placeholders?: string[]; anonymous?: boolean };
 }
 
 /** Options the prospect command passes in (who built it, when it ends). */
@@ -133,6 +137,8 @@ function shortName(name: string): string {
 export function buildBusiness(brief: Brief, prospect?: ProspectInfo): { business: Business; problems: string[] } {
   const preset = PRESETS[brief.vertical] ?? (PRESETS["generic"] as Preset);
   const placeholders = prospect ? (brief.prospect?.placeholders ?? []).filter((p) => typeof p === "string" && p.trim()).map((p) => p.trim()) : [];
+  const anonymous = Boolean(prospect && brief.prospect?.anonymous === true);
+  const placeholderNote = placeholders.length ? ` These details are placeholders: ${placeholders.join(", ")}.` : "";
   const services: Service[] = brief.services.map((s) => ({
     id: s.id ?? serviceId(s.name),
     name: s.name,
@@ -165,12 +171,14 @@ export function buildBusiness(brief: Brief, prospect?: ProspectInfo): { business
     name: brief.name,
     vertical: preset.verticalWord,
     fictional: brief.fictional ?? true,
-    fictionNote: prospect
-      ? `This is a sample receptionist built by ${prospect.builder} for ${brief.name}'s job post, not ${brief.name}'s own line, and not affiliated with ${brief.name}.${placeholders.length ? ` These details are placeholders: ${placeholders.join(", ")}.` : ""}`
+    fictionNote: anonymous && prospect
+      ? `This is a sample receptionist built by ${prospect.builder} from a job post for ${/^[aeiou]/i.test(preset.verticalWord) ? "an" : "a"} ${preset.verticalWord}. The business is not named here, and this is not its real line.${placeholderNote}`
+      : prospect
+      ? `This is a sample receptionist built by ${prospect.builder} for ${brief.name}'s job post, not ${brief.name}'s own line, and not affiliated with ${brief.name}.${placeholderNote}`
       : (brief.fictional ?? true)
         ? `${brief.name} is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented.`
         : "",
-    ...(prospect ? { prospect: { placeholders, builder: prospect.builder, expiresAt: prospect.expiresAt } } : {}),
+    ...(prospect ? { prospect: { placeholders, builder: prospect.builder, expiresAt: prospect.expiresAt, ...(anonymous ? { anonymous: true } : {}) } } : {}),
     timezone: brief.timezone,
     address: brief.address,
     ...(brief.serviceArea ? { serviceArea: brief.serviceArea } : {}),
@@ -184,7 +192,7 @@ export function buildBusiness(brief: Brief, prospect?: ProspectInfo): { business
     faq,
     policies: { cancellationNoticeHours: brief.cancellationNoticeHours ?? 24, lateCancelFeeUsd: brief.lateCancelFeeUsd ?? 0 },
     urgent: { routeWhenOpen: preset.routeWhenOpen, rules: preset.rules, ambiguous: preset.ambiguous, adviceWords: preset.adviceWords, emergencyMessage: preset.emergencyMessage },
-    brand: { color: brief.brandColor ?? "#0f766e", tagline: brief.tagline ?? `${brief.name}` },
+    brand: { color: brief.brandColor ?? "#0f766e", tagline: brief.tagline ?? (anonymous ? `Your ${preset.verticalWord}` : brief.name) },
     ...(brief.tryQuestions?.length ? { demo: { tryQuestions: brief.tryQuestions } } : {}),
   };
   if (!brief.emergencyLine && business.urgent.routeWhenOpen === "emergency_line") business.urgent.routeWhenOpen = "front_desk";
@@ -207,6 +215,7 @@ export function checkBrief(raw: unknown): string[] {
     if (typeof s.minutes !== "number") p.push(`services[${i}] (${s.name ?? "?"}): minutes must be a number`);
     if (typeof s.price !== "number") p.push(`services[${i}] (${s.name ?? "?"}): price must be a number (0 for free)`);
   }
+  if (b.prospect?.anonymous !== undefined && typeof b.prospect.anonymous !== "boolean") p.push("prospect.anonymous must be true or false");
   if (b.vertical && !VERTICALS.includes(b.vertical)) p.push(`vertical "${b.vertical}" is unknown; use one of ${VERTICALS.join(", ")} (generic works for anything)`);
   return p;
 }

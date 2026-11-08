@@ -396,7 +396,7 @@ export function createApp(c: AppConfig): App {
     async handle(req) {
       try {
         const res = await handle(req);
-        log(`${req.method} ${redact(req.url)} ${res.status}`);
+        log(`${req.method} ${redact(req.url)} ${res.status}${requestTags(req)}`);
         return res;
       } catch (err) {
         log(`${req.method} ${redact(req.url)} 500 ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
@@ -439,6 +439,17 @@ export function createHttpServer(app: App): Server {
         });
     });
   });
+}
+
+const BOT_UA = /bot|crawl|spider|preview|facebookexternalhit|slack|discord|whatsapp|telegram|skype|embedly|headless|curl|wget|python|node-fetch|undici|^node\b/i;
+
+/**
+ * Tags on the request log line, read by `npm run prospect:status`: " local" when the request did not come through the
+ * Cloudflare tunnel (checks run on this machine), " bot" for link-preview fetchers and scripts. Nothing personal.
+ */
+export function requestTags(req: Pick<Req, "headers">): string {
+  const ua = String(req.headers["user-agent"] ?? "");
+  return `${req.headers["cf-connecting-ip"] ? "" : " local"}${!ua || BOT_UA.test(ua) ? " bot" : ""}`;
 }
 
 /** A sample built for a prospect: its own app (bookings, tools), reached under /t/<slug>/, until it expires. */

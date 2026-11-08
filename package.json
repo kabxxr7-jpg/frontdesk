@@ -18,7 +18,8 @@
     "build:public": "node scripts/build-public.ts",
     "og": "node scripts/og-image.ts",
     "prospect": "node scripts/prospect.ts",
-    "prospect:clean": "node scripts/prospect-clean.ts"
+    "prospect:clean": "node scripts/prospect-clean.ts",
+    "prospect:status": "node scripts/prospect-status.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

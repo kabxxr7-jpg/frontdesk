@@ -1,6 +1,6 @@
 // Starts the front desk. Reads .env (see .env.example). Prints which features are on; never prints a secret.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { loadBusiness } from "../src/business.ts";
+import { loadBusiness, sampleSender } from "../src/business.ts";
 import { GoogleCalendar, MemoryCalendar, type Calendar } from "../src/calendar.ts";
 import { Db } from "../src/db.ts";
 import { MemoryEmail, ResendEmail, type EmailSender } from "../src/email.ts";
@@ -95,9 +95,10 @@ for (const slug of existsSync("prospects") ? readdirSync("prospects") : []) {
     if (!pb.prospect) continue;
     const pdb = new Db(`.runtime/prospects/${slug}.db`);
     prospectDbs.push(pdb);
-    // Each sample sends under its own name ("Smith Plumbing (sample)") from the same address.
+    // Each sample sends under its own name ("Smith Plumbing (sample)", or "Sample front desk" when the post hides the
+    // name) from the same address.
     const fromAddr = /<([^>]+)>/.exec(env("EMAIL_FROM") ?? "")?.[1] ?? env("EMAIL_FROM");
-    const pemail: EmailSender = resendKey && fromAddr ? new ResendEmail({ apiKey: resendKey, from: `${pb.name.replace(/[<>"]/g, "")} (sample) <${fromAddr}>` }) : email;
+    const pemail: EmailSender = resendKey && fromAddr ? new ResendEmail({ apiKey: resendKey, from: `${sampleSender(pb)} <${fromAddr}>` }) : email;
     const pcal: Calendar = saFile && calId && existsSync(saFile) ? GoogleCalendar.fromFile(saFile, calId, pb.timezone) : new MemoryCalendar();
     tenants.set(slug, {
       expiresAt: pb.prospect.expiresAt,

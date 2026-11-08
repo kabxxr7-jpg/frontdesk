@@ -3,7 +3,7 @@
 // sends (rendered by the same code the server uses, with sample data), how to get one, and a plain "about this demo".
 // No call recordings: the demo is talking to it yourself. No secrets: only the Vapi PUBLIC key can appear here.
 import type { Appointment } from "./db.ts";
-import type { Business } from "./business.ts";
+import { displayName, isAnonymous, sampleSender, type Business } from "./business.ts";
 import { escapeHtml as e } from "./email.ts";
 import { buildSummary } from "./postcall.ts";
 import { formatPhone, matchFaq, renderHours, usd } from "./text.ts";
@@ -54,6 +54,7 @@ export function buildOgCard(b: Business, builder = "Kabiir Labs"): string {
   const color = /^#[0-9a-fA-F]{6}$/.test(b.brand.color) ? b.brand.color : "#0f766e";
   const agent = b.agent.name;
   const long = b.agent.visitWord.length > 5;
+  const anon = isAnonymous(b);
   return `<!doctype html><html><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800&display=swap" rel="stylesheet">
 <style>
@@ -72,11 +73,11 @@ p{font-size:24px;line-height:1.4;color:#cbd5e1;margin:0;max-width:600px}
 .a{background:#1e293b;border-bottom-left-radius:5px}.c{background:${color};margin-left:auto;border-bottom-right-radius:5px}
 .live{font-size:17px;color:#4ade80;font-weight:600}
 </style></head><body>
-<div><div class="top"><i></i>${e(b.name)}</div>
+<div><div class="top"><i></i>${e(displayName(b))}</div>
 <h1>Every call answered.<br><span>Every ${e(b.agent.visitWord)} booked.</span></h1>
 <p>Talk to ${e(agent)}, a live AI receptionist. It books into a real calendar and emails a confirmation.</p></div>
 <div class="chat"><div class="live">&#9679; ${e(agent)} is answering now</div>
-<div class="m a">Thanks for calling ${e(b.name)}, this is ${e(agent)}. How can I help?</div>
+<div class="m a">${anon ? e(beginMessage(b)) : `Thanks for calling ${e(b.name)}, this is ${e(agent)}. How can I help?`}</div>
 <div class="m c">Can I come in Tuesday morning?</div>
 <div class="m a">Sure. I have 9:00 or 10:30. Which works better?</div></div>
 <div class="foot">${b.prospect ? `Sample built for your job post by <b>${e(builder)}</b>` : `Live demo by <b>${e(builder)}</b> &middot; fictional ${e(b.vertical)}`}</div>
@@ -201,6 +202,8 @@ export function buildSite(b: Business, o: SiteOptions): string {
       : `<p class="fine">The live line for this demo is being set up.</p>`;
 
   const pr = b.prospect;
+  const anon = isAnonymous(b);
+  const yours = `your ${b.vertical}`;
   const others = pr ? [] : (o.otherDemos ?? []).filter((d) => d.name !== b.name);
   const endDate = pr ? new Date(`${pr.expiresAt}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }) : "";
 
@@ -236,8 +239,8 @@ btn.addEventListener("click", async () => {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${e(agent)}, the AI receptionist for ${e(b.name)}</title>
-<meta name="description" content="Talk to ${e(agent)}, an AI receptionist that answers calls, books into a real calendar and emails a confirmation. A live demo for a fictional ${e(b.vertical)}.">
+<title>${anon ? e(`${cap(yours)}'s receptionist, a sample for your job post`) : `${e(agent)}, the AI receptionist for ${e(b.name)}`}</title>
+<meta name="description" content="Talk to ${e(agent)}, an AI receptionist that answers calls, books into a real calendar and emails a confirmation. ${pr ? "A sample set up for your job post." : `A live demo for a fictional ${e(b.vertical)}.`}">
 <meta name="color-scheme" content="light dark">
 ${pr ? '<meta name="robots" content="noindex,nofollow,noarchive">' : ""}
 <link rel="icon" href="${e(faviconHref(color))}">
@@ -334,19 +337,19 @@ footer{padding:36px 0 48px;color:var(--muted);font-size:14px;border-top:1px soli
 </style>
 </head>
 <body>
-<div class="strip"><div class="wrap"><span>${pr ? `Sample built for your job post by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">Not affiliated with ${e(b.name)}</span>` : `Live demo by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">${e(o.builderLine ?? "AI receptionists for clinics and home services")}</span>`}</span>${o.builderUrl ? `<a href="${e(o.builderUrl)}" target="_blank" rel="noopener">Work with me &rarr;</a>` : ""}</div></div>
+<div class="strip"><div class="wrap"><span>${pr ? `Sample built for your job post by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">${anon ? "Not connected to your real line" : `Not affiliated with ${e(b.name)}`}</span>` : `Live demo by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">${e(o.builderLine ?? "AI receptionists for clinics and home services")}</span>`}</span>${o.builderUrl ? `<a href="${e(o.builderUrl)}" target="_blank" rel="noopener">Work with me &rarr;</a>` : ""}</div></div>
 <div class="wrap">
-<nav><div class="logo"><i></i>${e(b.name)}</div><span class="badge">${pr ? "Sample demo" : `Fictional ${e(b.vertical)}`}</span></nav>
+<nav><div class="logo"><i></i>${e(displayName(b))}</div><span class="badge">${pr ? "Sample demo" : `Fictional ${e(b.vertical)}`}</span></nav>
 
 <div class="hero">
 <div>
 <h1>Every call answered.<br><em>Every ${e(vw)} booked.</em></h1>
-<p class="lead">${e(agent)} is an AI receptionist for ${e(b.name)}. ${e(agent)} picks up day and night, answers questions, books straight into the calendar and emails the ${e(cw)} a confirmation, so no caller hears voicemail.</p>
+<p class="lead">${anon ? `${e(agent)} is a sample AI receptionist for ${e(yours)}, set up from your job post.` : `${e(agent)} is an AI receptionist for ${e(b.name)}.`} ${e(agent)} picks up day and night, answers questions, books straight into the calendar and emails the ${e(cw)} a confirmation, so no caller hears voicemail.</p>
 <div class="btns">${tryButtons}</div>
 ${tryNote}
 </div>
 <div class="phone" aria-label="Example conversation">
-<div class="phone-top"><div class="avatar">${e(agent.charAt(0))}</div><div><b>${e(agent)} &middot; ${e(b.name)}</b><span>&#9679; Answering now</span></div></div>
+<div class="phone-top"><div class="avatar">${e(agent.charAt(0))}</div><div><b>${e(agent)} &middot; ${e(displayName(b))}</b><span>&#9679; Answering now</span></div></div>
 ${convo.map(([who, text]) => `<div class="msg ${who === "Caller" ? "c" : "a"}">${e(text)}</div>`).join("\n")}
 <p class="caption">Example conversation. Yours will go wherever you take it.</p>
 </div>
@@ -372,7 +375,7 @@ ${convo.map(([who, text]) => `<div class="msg ${who === "Caller" ? "c" : "a"}">$
 <div class="proof">
 <div>
 <p class="label">The ${e(cw)}'s confirmation email</p>
-<div class="mail"><div class="mail-head"><b>${e(mail.subject)}</b>From ${e(b.name)}</div><iframe title="Confirmation email" sandbox="" tabindex="-1" loading="lazy" srcdoc="${e(mailHtml)}"></iframe></div>
+<div class="mail"><div class="mail-head"><b>${e(mail.subject)}</b>From ${e(anon ? sampleSender(b) : b.name)}</div><iframe title="Confirmation email" sandbox="" tabindex="-1" loading="lazy" srcdoc="${e(mailHtml)}"></iframe></div>
 </div>
 <div class="stack">
 <div><p class="label">The calendar entry</p><div class="event"><b>${e(event.summary)}</b>${e(spokenDateTime(s.start, tz))} &middot; ${e(String(s.service.durationMinutes))} min</div></div>
@@ -442,7 +445,7 @@ ${o.builderUrl ? `<p style="margin-top:18px"><a class="btn light" href="${e(o.bu
 <h2 style="font-size:24px">About this demo</h2>
 <ul class="about">
 ${pr ? `<li><b>Real:</b> the AI receptionist, the calendar it books into, and the emails it sends.</li>
-<li><b>A sample, not your line:</b> built by ${e(builder)} from your job post. ${e(b.name)} has not reviewed it and it is not affiliated with ${e(b.name)}.</li>
+<li><b>A sample, not your line:</b> built by ${e(builder)} from your job post. ${anon ? "Your business is not named anywhere on it, and you have not reviewed it yet." : `${e(b.name)} has not reviewed it and it is not affiliated with ${e(b.name)}.`}</li>
 <li><b>Placeholders:</b> ${e(pr.placeholders.length ? `${pr.placeholders.join(", ")}. Your real details replace them.` : "none.")}</li>
 <li><b>Transfers to a person</b> are simulated in this sample.</li>
 <li><b>Removed after ${e(endDate)}.</b> Bookings made here are test bookings only.</li>` : `<li><b>Real:</b> the phone line, the AI receptionist, the calendar it books into, and the emails it sends.</li>

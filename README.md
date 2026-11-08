@@ -46,7 +46,7 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 
 ```bash
 npm ci
-npm test               # 157 tests
+npm test               # 161 tests
 npm run typecheck
 cp .env.example .env   # fill in; docs/ACCOUNTS.md has the click steps
 npm start
@@ -67,12 +67,22 @@ npm run vapi:setup -- --attach                       # assistant from BUSINESS_D
 npm run prospect -- brief.json            # builds, publishes and checks a sample in a few seconds; prints the link
 npm run prospect:clean -- --list          # samples and their end dates
 npm run prospect:clean                    # removes samples past their end date (Vapi assistant, page, bookings)
+npm run prospect:status                   # per sample: page first/last opened, calls (count, minutes, last), in IST
 ```
 
 A brief can carry `"prospect": { "placeholders": ["prices", "team names"] }`. The sample gets its own Vapi assistant
 (browser calls, no phone number), its own bookings database and the route `/t/<slug>/` on the same server, and its
 page at `/demos/<slug>/` is labelled as a sample built for the job post, hidden from search engines, and removed after
 14 days (`--days`). Samples live in `./prospects`, which is never committed.
+
+When the job post hides the business name, add `"anonymous": true` to `prospect` and give `name` an internal label
+such as `"Your clinic"`. The receptionist then answers "Thanks for calling, this is Ava at the front desk", the page
+reads "Your dental clinic's receptionist, a sample for your job post", emails come from "Sample front desk", calendar
+entries start `[Sample <slug>]`, and the preview card says "Your dental clinic". No business name is made up.
+
+`prospect:status` reads `.runtime/server.log`. The server tags each log line `local` when it did not come through the
+Cloudflare tunnel and `bot` for link-preview fetchers and scripts; those are left out of page opens. Calls come from
+Vapi's call list for the sample's assistant (counts and times only, never recordings or transcripts).
 
 ## Deploy (droplet, optional)
 

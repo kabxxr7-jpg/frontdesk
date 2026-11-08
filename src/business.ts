@@ -53,8 +53,11 @@ export interface Business {
   /** True for every demo. The demo page and every email say so. */
   fictional: boolean;
   fictionNote: string;
-  /** Set on a sample built for a prospect's job post: a real business name, details that are placeholders. */
-  prospect?: { placeholders: string[]; builder: string; expiresAt: string };
+  /**
+   * Set on a sample built for a prospect's job post: a real business name, details that are placeholders.
+   * anonymous: the post hides the business name, so callers and readers hear "your <vertical>", never a made-up name.
+   */
+  prospect?: { placeholders: string[]; builder: string; expiresAt: string; anonymous?: boolean };
   timezone: string;
   address: string;
   serviceArea?: string;
@@ -263,4 +266,19 @@ export function findStaff(b: Business, input: string): StaffMember | undefined {
 
 export function staffFor(b: Business, service: Service, staffId?: string): StaffMember[] {
   return b.staff.filter((st) => st.serviceIds.includes(service.id) && (staffId === undefined || st.id === staffId));
+}
+
+/** True on a sample whose job post hides the business name: nothing shown to a caller or reader names it. */
+export function isAnonymous(b: Business): boolean {
+  return Boolean(b.prospect?.anonymous);
+}
+
+/** The name readers see: the business's own, or "Your dental clinic" on an anonymous sample. */
+export function displayName(b: Business): string {
+  return isAnonymous(b) ? `Your ${b.vertical}` : b.name;
+}
+
+/** The sender name on a sample's emails: "Smith Plumbing (sample)", or "Sample front desk" when anonymous. */
+export function sampleSender(b: Business): string {
+  return (isAnonymous(b) ? "Sample front desk" : `${b.name} (sample)`).replace(/[<>"]/g, "");
 }

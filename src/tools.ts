@@ -1,7 +1,7 @@
 // The six tools the voice agent calls. Each takes the model's arguments (untrusted) and returns { ok, message, ... }:
 // `message` is a sentence the agent can read to the caller. Business problems (slot taken, bad date) are ok:false
 // results, never thrown errors. Anything that changes state needs the platform's call id.
-import { findService, findStaff, staffFor, type Business, type Service, type StaffMember } from "./business.ts";
+import { findService, isAnonymous, sampleSender, findStaff, staffFor, type Business, type Service, type StaffMember } from "./business.ts";
 import type { Calendar, CalendarEventInput } from "./calendar.ts";
 import type { Appointment, Db } from "./db.ts";
 import { escapeHtml, normalizeSpokenEmail, sendOnce, type EmailSender } from "./email.ts";
@@ -273,7 +273,7 @@ export function eventForAppointment(d: Deps, a: Appointment): CalendarEventInput
   const deposit = a.depositStatus === "paid" ? " [deposit paid]" : a.depositStatus === "due" ? " [deposit due]" : "";
   return {
     appointmentId: a.id,
-    summary: `${d.b.prospect ? `[${d.b.name}] ` : ""}${sv.name}: ${a.customerName} (${st.short})${deposit}`,
+    summary: `${d.b.prospect ? (isAnonymous(d.b) ? `[Sample ${d.b.slug}] ` : `[${d.b.name}] `) : ""}${sv.name}: ${a.customerName} (${st.short})${deposit}`,
     description: [
       `Booked by the AI front desk${d.b.prospect ? " (sample demo built for a job post)" : d.b.fictional ? " (demo, fictional business)" : ""}.`,
       `Code: ${a.code}`,
@@ -333,7 +333,14 @@ export function appointmentEmail(d: Deps, a: Appointment, kind: EmailKind): { su
   const demo = b.prospect
     ? `${b.fictionNote} No real ${b.agent.visitWord} exists.`
     : b.fictional ? `${b.name} is a fictional business used to demonstrate an AI front desk. No real ${b.agent.visitWord} exists, and the deposit link uses Stripe test mode (no real money; test card 4242 4242 4242 4242).` : "";
-  const subject = {
+  const anon = isAnonymous(b);
+  const subject = anon ? {
+    booked: `Booked: your ${b.agent.visitWord} on ${when}`,
+    rescheduled: `Moved: your ${b.agent.visitWord} is now ${when}`,
+    cancelled: `Cancelled: your ${b.agent.visitWord} on ${when}`,
+    deposit_paid: "Deposit received",
+    deposit_after_cancel: `Deposit received for a cancelled ${b.agent.visitWord}`,
+  }[kind] : {
     booked: `${b.name}: your ${b.agent.visitWord} on ${when}`,
     rescheduled: `${b.name}: your ${b.agent.visitWord} moved to ${when}`,
     cancelled: `${b.name}: your ${b.agent.visitWord} is cancelled`,
@@ -362,7 +369,7 @@ export function appointmentEmail(d: Deps, a: Appointment, kind: EmailKind): { su
   const color = /^#[0-9a-fA-F]{6}$/.test(b.brand.color) ? b.brand.color : "#0f766e";
   const html = `<!doctype html><html><body style="margin:0;background:#f6f7f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111">
 <div style="max-width:520px;margin:24px auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb">
-<div style="background:${color};color:#fff;padding:18px 22px;font-size:18px;font-weight:600">${escapeHtml(b.name)}</div>
+<div style="background:${color};color:#fff;padding:18px 22px;font-size:18px;font-weight:600">${escapeHtml(anon ? sampleSender(b) : b.name)}</div>
 <div style="padding:22px">
 <p style="margin:0 0 16px;font-size:16px">${escapeHtml(head)}</p>
 <table style="border-collapse:collapse;font-size:15px">${lines.map(([k, v]) => `<tr><td style="padding:4px 14px 4px 0;color:#6b7280">${escapeHtml(k)}</td><td style="padding:4px 0">${escapeHtml(v)}</td></tr>`).join("")}</table>

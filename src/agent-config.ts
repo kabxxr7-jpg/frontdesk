@@ -1,6 +1,6 @@
 // The agent's prompt and the Retell LLM / agent JSON, generated from business.json so a price or an hour lives in
 // one place. Field names follow the Retell API reference read on 2026-11-07 (create-retell-llm, create-agent).
-import type { Business } from "./business.ts";
+import { isAnonymous, type Business } from "./business.ts";
 import { formatPhone, joinList, renderHours, renderServiceLine, renderTokens, usd } from "./text.ts";
 
 export const TOOL_DEFS: { name: string; description: string; parameters: Record<string, unknown>; required: string[]; speak?: string }[] = [
@@ -84,7 +84,10 @@ export function buildPrompt(b: Business, vars: PromptVars = retellVars(b.timezon
   const services = b.services.map((s) => `- ${renderServiceLine(s)}`).join("\n");
   const staff = b.staff.map((s) => `- ${s.name}, ${s.title}`).join("\n");
   const cw = b.agent.customerWord;
-  return `You are ${b.agent.name}, the phone receptionist for ${b.name}, a ${b.vertical}${b.prospect ? " (this is a sample demonstration line set up for this business from its job post, not the business's real phone line; some details are placeholders; if asked whether this is really the business, say so honestly)" : b.fictional ? " (a fictional business used as a live demonstration; if asked, say so honestly)" : ""}.
+  const intro = isAnonymous(b)
+    ? `the phone receptionist for ${/^[aeiou]/i.test(b.vertical) ? "an" : "a"} ${b.vertical} (this is a sample demonstration line set up from the business's job post, not its real phone line; the job post does not give the business's name, so never say or make up a business name: if asked what the business is called, say this is a sample line set up for their ${b.vertical}; some details are placeholders; if asked whether this is really the business, say so honestly)`
+    : `the phone receptionist for ${b.name}, a ${b.vertical}${b.prospect ? " (this is a sample demonstration line set up for this business from its job post, not the business's real phone line; some details are placeholders; if asked whether this is really the business, say so honestly)" : b.fictional ? " (a fictional business used as a live demonstration; if asked, say so honestly)" : ""}`;
+  return `You are ${b.agent.name}, ${intro}.
 
 ## Facts
 - Now: ${vars.now}. ${vars.calendar}
@@ -129,6 +132,7 @@ ${staff}
 }
 
 export function beginMessage(b: Business): string {
+  if (isAnonymous(b)) return `Thanks for calling, this is ${b.agent.name} at the front desk. How can I help?`;
   return `Thanks for calling ${b.name}, this is ${b.agent.name}. How can I help you today?`;
 }
 
