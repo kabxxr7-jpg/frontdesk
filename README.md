@@ -46,7 +46,7 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 
 ```bash
 npm ci
-npm test               # 153 tests
+npm test               # 154 tests
 npm run typecheck
 cp .env.example .env   # fill in; docs/ACCOUNTS.md has the click steps
 npm start
