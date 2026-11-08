@@ -110,7 +110,7 @@ export function summaryEmail(s: CallSummary): { subject: string; text: string } 
   const who = s.customer.name ?? (s.from_number ? formatPhone(s.from_number) : "Unknown caller");
   const subject = `${flag}${s.business.name}: ${s.outcome.replace(/_/g, " ")} - ${who}`.slice(0, 160);
   const lines = [
-    `${s.business.name}${s.business.fictional ? " (demo, fictional business)" : ""}`,
+    `${s.business.name}${s.business.fictional ? " (demo)" : ""}`,
     `Call ${s.call_id} (${s.call_type ?? "call"}), ${s.duration_seconds ?? "?"} s, from ${s.from_number ? formatPhone(s.from_number) : "unknown"}`,
     `Urgency: ${s.urgency}. Outcome: ${s.outcome.replace(/_/g, " ")}.`,
     "",

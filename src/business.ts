@@ -53,6 +53,8 @@ export interface Business {
   /** True for every demo. The demo page and every email say so. */
   fictional: boolean;
   fictionNote: string;
+  /** Set on a sample built for a prospect's job post: a real business name, details that are placeholders. */
+  prospect?: { placeholders: string[]; builder: string; expiresAt: string };
   timezone: string;
   address: string;
   serviceArea?: string;

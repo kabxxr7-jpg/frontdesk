@@ -15,4 +15,11 @@ for (const slug of readdirSync("businesses")) {
   cpSync(site, slug === active ? "public" : join("public", "demos", slug), { recursive: true });
   done.push(slug === active ? `${slug} -> /` : `${slug} -> /demos/${slug}/`);
 }
+// Prospect samples (npm run prospect) live outside git in ./prospects and are served at /demos/<slug>/ too.
+for (const slug of existsSync("prospects") ? readdirSync("prospects") : []) {
+  const site = join("prospects", slug, "site");
+  if (!existsSync(join(site, "index.html"))) continue;
+  cpSync(site, join("public", "demos", slug), { recursive: true });
+  done.push(`${slug} (prospect) -> /demos/${slug}/`);
+}
 console.log(`public/ built: ${done.join(", ")}`);

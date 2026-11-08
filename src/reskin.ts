@@ -28,6 +28,14 @@ export interface Brief {
   minLeadMinutes?: number;
   /** Questions the demo page suggests ("Do you take Delta Dental?"). */
   tryQuestions?: string[];
+  /** A sample for a prospect's job post: which details are placeholders (e.g. "prices", "team names", "hours"). */
+  prospect?: { placeholders?: string[] };
+}
+
+/** Options the prospect command passes in (who built it, when it ends). */
+export interface ProspectInfo {
+  builder: string;
+  expiresAt: string;
 }
 
 interface Preset {
@@ -122,8 +130,9 @@ function shortName(name: string): string {
   return parts[0] ?? name;
 }
 
-export function buildBusiness(brief: Brief): { business: Business; problems: string[] } {
+export function buildBusiness(brief: Brief, prospect?: ProspectInfo): { business: Business; problems: string[] } {
   const preset = PRESETS[brief.vertical] ?? (PRESETS["generic"] as Preset);
+  const placeholders = prospect ? (brief.prospect?.placeholders ?? []).filter((p) => typeof p === "string" && p.trim()).map((p) => p.trim()) : [];
   const services: Service[] = brief.services.map((s) => ({
     id: s.id ?? serviceId(s.name),
     name: s.name,
@@ -156,9 +165,12 @@ export function buildBusiness(brief: Brief): { business: Business; problems: str
     name: brief.name,
     vertical: preset.verticalWord,
     fictional: brief.fictional ?? true,
-    fictionNote: (brief.fictional ?? true)
-      ? `${brief.name} is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented.`
-      : "",
+    fictionNote: prospect
+      ? `This is a sample receptionist built by ${prospect.builder} for ${brief.name}'s job post, not ${brief.name}'s own line, and not affiliated with ${brief.name}.${placeholders.length ? ` These details are placeholders: ${placeholders.join(", ")}.` : ""}`
+      : (brief.fictional ?? true)
+        ? `${brief.name} is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented.`
+        : "",
+    ...(prospect ? { prospect: { placeholders, builder: prospect.builder, expiresAt: prospect.expiresAt } } : {}),
     timezone: brief.timezone,
     address: brief.address,
     ...(brief.serviceArea ? { serviceArea: brief.serviceArea } : {}),

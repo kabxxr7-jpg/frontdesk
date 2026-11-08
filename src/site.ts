@@ -79,7 +79,7 @@ p{font-size:24px;line-height:1.4;color:#cbd5e1;margin:0;max-width:600px}
 <div class="m a">Thanks for calling ${e(b.name)}, this is ${e(agent)}. How can I help?</div>
 <div class="m c">Can I come in Tuesday morning?</div>
 <div class="m a">Sure. I have 9:00 or 10:30. Which works better?</div></div>
-<div class="foot">Live demo by <b>${e(builder)}</b> &middot; fictional ${e(b.vertical)}</div>
+<div class="foot">${b.prospect ? `Sample built for your job post by <b>${e(builder)}</b>` : `Live demo by <b>${e(builder)}</b> &middot; fictional ${e(b.vertical)}`}</div>
 </body></html>`;
 }
 
@@ -200,7 +200,9 @@ export function buildSite(b: Business, o: SiteOptions): string {
       ? `<p class="fine">This page shows the same receptionist set up for ${e(an(b.vertical))}. To talk to it live, try <a href="${e(o.liveDemo.url)}">the ${e(o.liveDemo.name)} demo</a>; it runs on the same engine.</p>`
       : `<p class="fine">The live line for this demo is being set up.</p>`;
 
-  const others = (o.otherDemos ?? []).filter((d) => d.name !== b.name);
+  const pr = b.prospect;
+  const others = pr ? [] : (o.otherDemos ?? []).filter((d) => d.name !== b.name);
+  const endDate = pr ? new Date(`${pr.expiresAt}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }) : "";
 
   const webScript = o.webCall
     ? `<script type="module">
@@ -237,6 +239,7 @@ btn.addEventListener("click", async () => {
 <title>${e(agent)}, the AI receptionist for ${e(b.name)}</title>
 <meta name="description" content="Talk to ${e(agent)}, an AI receptionist that answers calls, books into a real calendar and emails a confirmation. A live demo for a fictional ${e(b.vertical)}.">
 <meta name="color-scheme" content="light dark">
+${pr ? '<meta name="robots" content="noindex,nofollow,noarchive">' : ""}
 <link rel="icon" href="${e(faviconHref(color))}">
 <meta name="theme-color" content="${e(color)}">
 <meta property="og:type" content="website">
@@ -331,9 +334,9 @@ footer{padding:36px 0 48px;color:var(--muted);font-size:14px;border-top:1px soli
 </style>
 </head>
 <body>
-<div class="strip"><div class="wrap"><span>Live demo by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">${e(o.builderLine ?? "AI receptionists for clinics and home services")}</span></span>${o.builderUrl ? `<a href="${e(o.builderUrl)}" target="_blank" rel="noopener">Work with me &rarr;</a>` : ""}</div></div>
+<div class="strip"><div class="wrap"><span>${pr ? `Sample built for your job post by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">Not affiliated with ${e(b.name)}</span>` : `Live demo by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">${e(o.builderLine ?? "AI receptionists for clinics and home services")}</span>`}</span>${o.builderUrl ? `<a href="${e(o.builderUrl)}" target="_blank" rel="noopener">Work with me &rarr;</a>` : ""}</div></div>
 <div class="wrap">
-<nav><div class="logo"><i></i>${e(b.name)}</div><span class="badge">Fictional ${e(b.vertical)}</span></nav>
+<nav><div class="logo"><i></i>${e(b.name)}</div><span class="badge">${pr ? "Sample demo" : `Fictional ${e(b.vertical)}`}</span></nav>
 
 <div class="hero">
 <div>
@@ -399,8 +402,8 @@ ${summary.appointments.map((a) => `<dt>Booked</dt><dd>${e(`${a.service}, ${a.spo
 
 <section id="get">
 <div class="wrap">
-<h2>Want this for your business?</h2>
-<p class="sub">${e(b.name)} is made up, but the receptionist is real and is set up from a business's own information. ${others.length ? "Here's the same one set up for other kinds of business:" : ""}</p>
+<h2>${pr ? "Make it yours" : "Want this for your business?"}</h2>
+<p class="sub">${pr ? `This sample was set up from the details in your job post. With your real hours, prices, team and calendar, ${e(agent)} answers your callers the same way.` : `${e(b.name)} is made up, but the receptionist is real and is set up from a business's own information. ${others.length ? "Here's the same one set up for other kinds of business:" : ""}`}</p>
 ${others.length ? `<div class="pills" style="margin:-20px 0 32px">${others.map((d) => `<a href="${e(d.url)}">${e(cap(d.vertical))}: ${e(d.name)}</a>`).join("")}</div>` : ""}
 <div class="get">
 <div class="card">
@@ -438,10 +441,14 @@ ${o.builderUrl ? `<p style="margin-top:18px"><a class="btn light" href="${e(o.bu
 <div class="wrap">
 <h2 style="font-size:24px">About this demo</h2>
 <ul class="about">
-<li><b>Real:</b> the phone line, the AI receptionist, the calendar it books into, and the emails it sends.</li>
+${pr ? `<li><b>Real:</b> the AI receptionist, the calendar it books into, and the emails it sends.</li>
+<li><b>A sample, not your line:</b> built by ${e(builder)} from your job post. ${e(b.name)} has not reviewed it and it is not affiliated with ${e(b.name)}.</li>
+<li><b>Placeholders:</b> ${e(pr.placeholders.length ? `${pr.placeholders.join(", ")}. Your real details replace them.` : "none.")}</li>
+<li><b>Transfers to a person</b> are simulated in this sample.</li>
+<li><b>Removed after ${e(endDate)}.</b> Bookings made here are test bookings only.</li>` : `<li><b>Real:</b> the phone line, the AI receptionist, the calendar it books into, and the emails it sends.</li>
 <li><b>Made up:</b> ${e(b.name)} itself. The name, address, team and prices are invented.</li>
 <li><b>Deposits</b> use Stripe's test mode, so no real money moves. Test card: 4242 4242 4242 4242.</li>
-<li><b>Transfers to a person</b> are simulated, because the business's own numbers are fictional.</li>
+<li><b>Transfers to a person</b> are simulated, because the business's own numbers are fictional.</li>`}
 <li><b>Calls aren't recorded.</b> I can see the transcript and summary, so use a made-up name if you like.</li>
 <li><b>Not for real emergencies.</b> ${b.agent.customerWord === "patient" ? "For a medical or dental emergency, call 911." : "For an emergency, call 911."}</li>
 </ul>

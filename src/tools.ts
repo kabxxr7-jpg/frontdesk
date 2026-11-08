@@ -273,9 +273,9 @@ export function eventForAppointment(d: Deps, a: Appointment): CalendarEventInput
   const deposit = a.depositStatus === "paid" ? " [deposit paid]" : a.depositStatus === "due" ? " [deposit due]" : "";
   return {
     appointmentId: a.id,
-    summary: `${sv.name}: ${a.customerName} (${st.short})${deposit}`,
+    summary: `${d.b.prospect ? `[${d.b.name}] ` : ""}${sv.name}: ${a.customerName} (${st.short})${deposit}`,
     description: [
-      `Booked by the AI front desk${d.b.fictional ? " (demo, fictional business)" : ""}.`,
+      `Booked by the AI front desk${d.b.prospect ? " (sample demo built for a job post)" : d.b.fictional ? " (demo, fictional business)" : ""}.`,
       `Code: ${a.code}`,
       `${capital(d.b.agent.customerWord)}: ${a.customerName}`,
       `Phone: ${a.phone}`,
@@ -330,7 +330,9 @@ export function appointmentEmail(d: Deps, a: Appointment, kind: EmailKind): { su
   const sv = serviceOf(d, a.serviceId);
   const st = staffOf(d, a.staffId);
   const when = spokenDateTime(a.startUtc, b.timezone);
-  const demo = b.fictional ? `${b.name} is a fictional business used to demonstrate an AI front desk. No real ${b.agent.visitWord} exists, and the deposit link uses Stripe test mode (no real money; test card 4242 4242 4242 4242).` : "";
+  const demo = b.prospect
+    ? `${b.fictionNote} No real ${b.agent.visitWord} exists.`
+    : b.fictional ? `${b.name} is a fictional business used to demonstrate an AI front desk. No real ${b.agent.visitWord} exists, and the deposit link uses Stripe test mode (no real money; test card 4242 4242 4242 4242).` : "";
   const subject = {
     booked: `${b.name}: your ${b.agent.visitWord} on ${when}`,
     rescheduled: `${b.name}: your ${b.agent.visitWord} moved to ${when}`,

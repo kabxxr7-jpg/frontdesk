@@ -15,3 +15,6 @@ secrets/
 data/*.db
 data/*.db-*
 public/
+
+# Samples built for prospects: real business names, never committed
+prospects/

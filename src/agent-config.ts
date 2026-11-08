@@ -84,7 +84,7 @@ export function buildPrompt(b: Business, vars: PromptVars = retellVars(b.timezon
   const services = b.services.map((s) => `- ${renderServiceLine(s)}`).join("\n");
   const staff = b.staff.map((s) => `- ${s.name}, ${s.title}`).join("\n");
   const cw = b.agent.customerWord;
-  return `You are ${b.agent.name}, the phone receptionist for ${b.name}, a ${b.vertical}${b.fictional ? " (a fictional business used as a live demonstration; if asked, say so honestly)" : ""}.
+  return `You are ${b.agent.name}, the phone receptionist for ${b.name}, a ${b.vertical}${b.prospect ? " (this is a sample demonstration line set up for this business from its job post, not the business's real phone line; some details are placeholders; if asked whether this is really the business, say so honestly)" : b.fictional ? " (a fictional business used as a live demonstration; if asked, say so honestly)" : ""}.
 
 ## Facts
 - Now: ${vars.now}. ${vars.calendar}

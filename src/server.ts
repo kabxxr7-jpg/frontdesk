@@ -440,3 +440,38 @@ export function createHttpServer(app: App): Server {
     });
   });
 }
+
+/** A sample built for a prospect: its own app (bookings, tools), reached under /t/<slug>/, until it expires. */
+export interface Tenant {
+  app: App;
+  /** "2026-11-22": the last day it answers. */
+  expiresAt: string;
+}
+
+const TENANT_PATH = /^\/t\/([a-z0-9][a-z0-9-]{1,60})(\/.*)$/;
+
+/**
+ * One server, many front desks: /t/<slug>/... goes to that prospect's app with the prefix removed (so its tools,
+ * pay links and post-call reports work unchanged); everything else goes to the main demo. An expired sample answers
+ * 410 so a stale Vapi assistant cannot book anything.
+ */
+export function createRouter(primary: App, tenants: Map<string, Tenant>, clock: () => number = Date.now): App {
+  return {
+    deps: primary.deps,
+    async handle(req) {
+      const m = TENANT_PATH.exec(req.url);
+      if (!m) return primary.handle(req);
+      const t = tenants.get(m[1] as string);
+      if (!t) return json(404, { error: "not_found" });
+      if (new Date(clock()).toISOString().slice(0, 10) > t.expiresAt) return json(410, { error: "sample_ended" });
+      return t.app.handle({ ...req, url: m[2] as string });
+    },
+    async settle() {
+      await Promise.all([primary.settle(), ...[...tenants.values()].map((t) => t.app.settle())]);
+    },
+    close() {
+      primary.close();
+      for (const t of tenants.values()) t.app.close();
+    },
+  };
+}

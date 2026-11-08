@@ -16,7 +16,9 @@
     "check:live": "node scripts/check-live.ts",
     "vapi:setup": "node scripts/vapi-setup.ts",
     "build:public": "node scripts/build-public.ts",
-    "og": "node scripts/og-image.ts"
+    "og": "node scripts/og-image.ts",
+    "prospect": "node scripts/prospect.ts",
+    "prospect:clean": "node scripts/prospect-clean.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

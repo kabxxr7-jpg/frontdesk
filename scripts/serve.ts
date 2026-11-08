@@ -4,7 +4,7 @@ import { loadBusiness } from "../src/business.ts";
 import { GoogleCalendar, MemoryCalendar, type Calendar } from "../src/calendar.ts";
 import { Db } from "../src/db.ts";
 import { MemoryEmail, ResendEmail, type EmailSender } from "../src/email.ts";
-import { createApp, createHttpServer } from "../src/server.ts";
+import { createApp, createHttpServer, createRouter, type Tenant } from "../src/server.ts";
 import { StripeClient } from "../src/stripe.ts";
 import { env, loadEnv } from "./env.ts";
 
@@ -82,19 +82,56 @@ const app = createApp({
   maxCallsPerDay: Number(env("MAX_CALLS_PER_DAY") ?? "40"),
   log: (l) => console.log(`${new Date().toISOString()} ${l}`),
 });
-const server = createHttpServer(app);
+// Samples built for prospects (npm run prospect): each gets its own bookings database and answers under /t/<slug>/.
+// Same calendar and email sender; no deposits, no CRM. Expired samples answer 410 (npm run prospect:clean removes them).
+const tenants = new Map<string, Tenant>();
+const prospectDbs: Db[] = [];
+const base = need("PUBLIC_BASE_URL").replace(/\/+$/, "");
+for (const slug of existsSync("prospects") ? readdirSync("prospects") : []) {
+  const dir = `prospects/${slug}`;
+  if (!existsSync(`${dir}/business.json`)) continue;
+  try {
+    const pb = loadBusiness(dir);
+    if (!pb.prospect) continue;
+    const pdb = new Db(`.runtime/prospects/${slug}.db`);
+    prospectDbs.push(pdb);
+    // Each sample sends under its own name ("Smith Plumbing (sample)") from the same address.
+    const fromAddr = /<([^>]+)>/.exec(env("EMAIL_FROM") ?? "")?.[1] ?? env("EMAIL_FROM");
+    const pemail: EmailSender = resendKey && fromAddr ? new ResendEmail({ apiKey: resendKey, from: `${pb.name.replace(/[<>"]/g, "")} (sample) <${fromAddr}>` }) : email;
+    const pcal: Calendar = saFile && calId && existsSync(saFile) ? GoogleCalendar.fromFile(saFile, calId, pb.timezone) : new MemoryCalendar();
+    tenants.set(slug, {
+      expiresAt: pb.prospect.expiresAt,
+      app: createApp({
+        b: pb, db: pdb, calendar: pcal, email: pemail,
+        vapiSecret: env("VAPI_SERVER_SECRET"),
+        publicBaseUrl: `${base}/t/${slug}`,
+        linkSecret: need("LINK_SECRET"),
+        teamEmail: env("TEAM_EMAIL"),
+        replyTo: env("REPLY_TO"),
+        transfersLive: false,
+        maxCallsPerDay: Number(env("MAX_CALLS_PER_DAY") ?? "40"),
+        log: (l) => console.log(`${new Date().toISOString()} [${slug}] ${l}`),
+      }),
+    });
+  } catch (err) {
+    console.error(`prospect ${slug} skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+const router = createRouter(app, tenants);
+const server = createHttpServer(router);
 const port = Number(env("PORT") ?? "8080");
 const host = env("HOST") ?? "127.0.0.1";
 server.listen(port, host, () => {
   console.log(
-    `frontdesk for ${b.name} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"} | voice: ${[env("RETELL_API_KEY") ? "retell" : "", env("VAPI_SERVER_SECRET") ? "vapi" : ""].filter(Boolean).join("+")}`,
+    `frontdesk for ${b.name}${tenants.size ? ` + ${tenants.size} prospect sample(s)` : ""} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"} | voice: ${[env("RETELL_API_KEY") ? "retell" : "", env("VAPI_SERVER_SECRET") ? "vapi" : ""].filter(Boolean).join("+")}`,
   );
 });
 for (const sig of ["SIGINT", "SIGTERM"] as const) {
   process.on(sig, () => {
-    app.close();
+    router.close();
     server.close(() => {
       db.close();
+      for (const pdb of prospectDbs) pdb.close();
       process.exit(0);
     });
     setTimeout(() => process.exit(0), 5000).unref();
