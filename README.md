@@ -12,7 +12,7 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 |---|---|---|
 | Phone line and voice agent | **Real, live on Vapi since 7 Nov 2026** | A US number on Vapi; a real call from a phone booked an appointment end to end (code PEFW, 7 Nov 2026, 23:02 IST) |
 | Google Calendar (service account) | **Real, verified 7 Nov 2026** | That call's booking created an event in the real calendar; an earlier signed test booking and its cancel also ran |
-| Confirmation email (Resend) | **Real, verified 7 Nov 2026** | The caller's confirmation with the code arrived in a real inbox. Sent from Resend's shared test sender until the domain is verified |
+| Confirmation email (Resend) | **Real, verified 7 Nov 2026; own domain since 8 Nov 2026** | The caller's confirmation with the code arrives from bookings@kabiirlabs.com (domain verified in Resend with DKIM and SPF); a test booking on 8 Nov landed in a Gmail inbox, not spam |
 | Team summary after each call | **Real, verified 7 Nov 2026** | Vapi's end-of-call report produced one summary email to the team inbox |
 | Stripe deposit | **Real, test mode.** Checkout page verified 7 Nov 2026; the paid webhook is not yet verified on a live call | A booking opened a real Stripe Checkout session (test mode; live keys are refused). No money moves |
 | Browser call | **Real, verified 8 Nov 2026** | "Talk to Ava in your browser" on the demo page (Vapi web SDK, public key restricted to the site); tested on a phone on mobile data |
