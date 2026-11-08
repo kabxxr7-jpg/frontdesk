@@ -89,7 +89,12 @@ function liveOptions() {
   const active = all.find((x) => x.slug === activeSlug);
   const publicKey = env("VAPI_PUBLIC_KEY");
   const assistantId = env("VAPI_ASSISTANT_ID");
+  const siteUrl = (env("SITE_URL") ?? "").replace(/\/+$/, "");
+  const pageUrl = siteUrl ? `${siteUrl}${isActive ? "/" : `/demos/${business.slug}/`}` : undefined;
   return {
+    ...(pageUrl ? { pageUrl } : {}),
+    ...(pageUrl && existsSync(join(dir, "site", "og.png")) ? { ogImage: `${pageUrl}og.png` } : {}),
+    ...(env("BUILDER_LINE") ? { builderLine: env("BUILDER_LINE") as string } : {}),
     ...(isActive && publicKey && assistantId ? { webCall: { publicKey, assistantId } } : {}),
     ...(!isActive && active ? { liveDemo: { url: active.url, name: active.name } } : {}),
     otherDemos: all.map(({ url, name, vertical }) => ({ url, name, vertical })),

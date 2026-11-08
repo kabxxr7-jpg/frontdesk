@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { loadBusiness } from "../src/business.ts";
 import { buildBusiness, checkBrief } from "../src/reskin.ts";
-import { buildSite } from "../src/site.ts";
+import { buildOgCard, buildSite } from "../src/site.ts";
 import { rig, type Rig } from "./helpers.ts";
 
 let r: Rig | undefined;
@@ -57,6 +57,14 @@ describe("re-skin", () => {
     expect(html).toContain("K7QM");
     expect(html).toContain("Brightside Family Dental");
     expect(html).not.toContain("example.invalid");
+    const shared = buildSite(b, { depositsOn: false, crmOn: false, pageUrl: "https://example.com/demos/x/", ogImage: "https://example.com/demos/x/og.png", builderUrl: "https://www.upwork.com/freelancers/someone", nowMs: Date.UTC(2026, 10, 8, 12) });
+    expect(shared).toContain('<meta property="og:image" content="https://example.com/demos/x/og.png">');
+    expect(shared).toContain('summary_large_image');
+    expect(shared).toContain('rel="icon" href="data:image/svg+xml');
+    expect(shared).toContain('class="strip"');
+    expect(shared).toContain("Work with me");
+    expect(buildSite(b, { depositsOn: false, crmOn: false })).not.toContain("og:image");
+    expect(buildOgCard(b)).toContain("Every job booked.");
     const other = buildSite(b, { depositsOn: false, crmOn: false, liveDemo: { url: "/", name: "Brightside Family Dental" }, nowMs: Date.UTC(2026, 10, 8, 12) });
     expect(other).toContain('href="/"');
     expect(other).not.toContain("tel:");

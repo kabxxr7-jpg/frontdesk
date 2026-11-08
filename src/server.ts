@@ -46,6 +46,8 @@ export interface AppConfig {
   summaryFallbackMs?: number;
   /** Static demo pages by path ("/", "/demos/<slug>/"), read once at startup from ./public. */
   sitePages?: Record<string, string>;
+  /** Static files next to the demo pages (preview images), by path. */
+  siteAssets?: Record<string, { type: string; data: Buffer }>;
 }
 
 export interface Req {
@@ -58,6 +60,8 @@ export interface Res {
   status: number;
   headers: Record<string, string>;
   body: string;
+  /** Binary body (images); sent instead of `body` when set. */
+  raw?: Buffer;
 }
 
 const JSON_H = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -369,6 +373,8 @@ export function createApp(c: AppConfig): App {
     if (req.method === "GET" || req.method === "HEAD") {
       const html = c.sitePages?.[path.endsWith("/") ? path : `${path}/`];
       if (html !== undefined) return { status: 200, headers: { ...HTML_H, "cache-control": "public, max-age=60" }, body: html };
+      const asset = c.siteAssets?.[path];
+      if (asset) return { status: 200, headers: { "content-type": asset.type, "cache-control": "public, max-age=3600" }, body: "", raw: asset.data };
     }
     if (path === "/healthz") return json(200, { ok: true, business: c.b.slug, calendar: c.calendar.kind, email: c.email.kind, deposits: Boolean(c.stripe), n8n: Boolean(c.n8n) });
     if (path === "/pay/done" && req.method === "GET") return page(c.b, "Deposit received", "<p>Thank you. Your deposit is being confirmed; you will get an email receipt shortly.</p>");
@@ -426,7 +432,7 @@ export function createHttpServer(app: App): Server {
       if (aborted) return;
       void app
         .handle({ method: req.method ?? "GET", url: req.url ?? "/", headers: req.headers, body: Buffer.concat(chunks) })
-        .then((r) => res.writeHead(r.status, r.headers).end(r.body))
+        .then((r) => res.writeHead(r.status, r.headers).end(r.raw ?? r.body))
         .catch(() => {
           if (!res.headersSent) res.writeHead(500, JSON_H);
           res.end(JSON.stringify({ error: "internal_error" }));

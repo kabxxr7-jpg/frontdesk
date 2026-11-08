@@ -32,11 +32,57 @@ export interface SiteOptions {
   builderUrl?: string | undefined;
   /** Fixed clock for tests. */
   nowMs?: number | undefined;
+  /** Absolute address of this page (for link previews), e.g. https://kabiirlabs.com/ */
+  pageUrl?: string | undefined;
+  /** Absolute address of the 1200x630 preview image made by `npm run og`. */
+  ogImage?: string | undefined;
+  /** One line under the builder's name in the top strip. */
+  builderLine?: string | undefined;
 }
 
 const an = (w: string): string => (/^[aeiou]/i.test(w) ? `an ${w}` : `a ${w}`);
 const cap = (w: string): string => w.charAt(0).toUpperCase() + w.slice(1);
 const telHref = (p: string): string => `tel:${p.replace(/[^+\d]/g, "")}`;
+/** A small round mark in the brand colour, as an inline SVG (no extra request). */
+function faviconHref(color: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="${color}"/><circle cx="32" cy="32" r="13" fill="none" stroke="#fff" stroke-width="6"/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+/** The 1200x630 card shown when the page link is shared (rendered to og.png by `npm run og`). */
+export function buildOgCard(b: Business, builder = "Kabiir Labs"): string {
+  const color = /^#[0-9a-fA-F]{6}$/.test(b.brand.color) ? b.brand.color : "#0f766e";
+  const agent = b.agent.name;
+  const long = b.agent.visitWord.length > 5;
+  return `<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:1200px;height:630px}
+body{font-family:Inter,-apple-system,Helvetica,Arial,sans-serif;background:#0b1120;color:#fff;display:grid;grid-template-columns:1.25fr .75fr;gap:40px;padding:64px 72px;position:relative;overflow:hidden}
+body:before{content:"";position:absolute;right:-180px;top:-180px;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,${color}66,transparent 65%)}
+.top{font-size:22px;font-weight:600;color:#94a3b8;display:flex;align-items:center;gap:14px}
+.top i{width:40px;height:40px;border-radius:12px;background:${color};position:relative;display:inline-block}
+.top i:after{content:"";position:absolute;inset:11px;border-radius:50%;border:4px solid #fff}
+h1{font-size:${long ? 58 : 68}px;line-height:1.04;letter-spacing:-.035em;margin:${long ? 34 : 40}px 0 22px;font-weight:800}
+h1 span{color:${color};filter:brightness(1.5)}
+p{font-size:24px;line-height:1.4;color:#cbd5e1;margin:0;max-width:600px}
+.foot{position:absolute;left:72px;bottom:52px;font-size:22px;color:#94a3b8}.foot b{color:#fff}
+.chat{position:relative;align-self:center;background:#111a2e;border:1px solid #1e293b;border-radius:28px;padding:24px;display:grid;gap:12px}
+.m{font-size:20px;line-height:1.35;padding:13px 17px;border-radius:18px;max-width:92%}
+.a{background:#1e293b;border-bottom-left-radius:5px}.c{background:${color};margin-left:auto;border-bottom-right-radius:5px}
+.live{font-size:17px;color:#4ade80;font-weight:600}
+</style></head><body>
+<div><div class="top"><i></i>${e(b.name)}</div>
+<h1>Every call answered.<br><span>Every ${e(b.agent.visitWord)} booked.</span></h1>
+<p>Talk to ${e(agent)}, a live AI receptionist. It books into a real calendar and emails a confirmation.</p></div>
+<div class="chat"><div class="live">&#9679; ${e(agent)} is answering now</div>
+<div class="m a">Thanks for calling ${e(b.name)}, this is ${e(agent)}. How can I help?</div>
+<div class="m c">Can I come in Tuesday morning?</div>
+<div class="m a">Sure. I have 9:00 or 10:30. Which works better?</div></div>
+<div class="foot">Live demo by <b>${e(builder)}</b> &middot; fictional ${e(b.vertical)}</div>
+</body></html>`;
+}
+
 const VAPI_WEB_SDK = "https://cdn.jsdelivr.net/npm/@vapi-ai/web@3.0.1/+esm";
 
 /** A believable booking for the examples: the first service, someone who does it, next Tuesday 9:00 local. */
@@ -191,6 +237,13 @@ btn.addEventListener("click", async () => {
 <title>${e(agent)}, the AI receptionist for ${e(b.name)}</title>
 <meta name="description" content="Talk to ${e(agent)}, an AI receptionist that answers calls, books into a real calendar and emails a confirmation. A live demo for a fictional ${e(b.vertical)}.">
 <meta name="color-scheme" content="light dark">
+<link rel="icon" href="${e(faviconHref(color))}">
+<meta name="theme-color" content="${e(color)}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${e(`Talk to ${agent}: a live AI receptionist demo`)}">
+<meta property="og:description" content="${e(`${agent} answers calls, books into a real calendar and emails a confirmation. Try it in your browser.`)}">
+${o.pageUrl ? `<meta property="og:url" content="${e(o.pageUrl)}">` : ""}
+${o.ogImage ? `<meta property="og:image" content="${e(o.ogImage)}">\n<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:image" content="${e(o.ogImage)}">` : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -200,6 +253,10 @@ btn.addEventListener("click", async () => {
 body{margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;font-size:16px}
 a{color:var(--brand)}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.strip{background:var(--ink);color:var(--bg);font-size:13px}
+.strip .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:9px;padding-bottom:9px}
+.strip b{font-weight:700}.strip a{color:inherit;font-weight:600;text-decoration:none;white-space:nowrap;opacity:.9}.strip a:hover{opacity:1;text-decoration:underline}
+@media (max-width:640px){.strip .sep,.strip .line{display:none}}
 nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:18px 0;gap:10px 12px}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
 .logo i{width:30px;height:30px;border-radius:9px;background:var(--brand);display:inline-block;position:relative}
@@ -274,8 +331,9 @@ footer{padding:36px 0 48px;color:var(--muted);font-size:14px;border-top:1px soli
 </style>
 </head>
 <body>
+<div class="strip"><div class="wrap"><span>Live demo by <b>${e(builder)}</b><span class="sep"> &middot; </span><span class="line">${e(o.builderLine ?? "AI receptionists for clinics and home services")}</span></span>${o.builderUrl ? `<a href="${e(o.builderUrl)}" target="_blank" rel="noopener">Work with me &rarr;</a>` : ""}</div></div>
 <div class="wrap">
-<nav><div class="logo"><i></i>${e(b.name)}</div><span class="badge">${canCall || canWeb ? "Live demo" : "Demo"} &middot; fictional ${e(b.vertical)}</span></nav>
+<nav><div class="logo"><i></i>${e(b.name)}</div><span class="badge">Fictional ${e(b.vertical)}</span></nav>
 
 <div class="hero">
 <div>

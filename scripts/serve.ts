@@ -55,8 +55,21 @@ for (const slug of existsSync("public/demos") ? readdirSync("public/demos") : []
   if (existsSync(`public/demos/${slug}/index.html`)) sitePages[`/demos/${slug}/`] = readFileSync(`public/demos/${slug}/index.html`, "utf8");
 }
 
+const TYPES: Record<string, string> = { png: "image/png", jpg: "image/jpeg", svg: "image/svg+xml", webp: "image/webp", ico: "image/x-icon" };
+const siteAssets: Record<string, { type: string; data: Buffer }> = {};
+const addAssets = (dir: string, prefix: string): void => {
+  if (!existsSync(dir)) return;
+  for (const f of readdirSync(dir)) {
+    const type = TYPES[f.split(".").pop()?.toLowerCase() ?? ""];
+    if (type) siteAssets[`${prefix}${f}`] = { type, data: readFileSync(`${dir}/${f}`) };
+  }
+};
+addAssets("public", "/");
+for (const slug of existsSync("public/demos") ? readdirSync("public/demos") : []) addAssets(`public/demos/${slug}`, `/demos/${slug}/`);
+
 const app = createApp({
   sitePages,
+  siteAssets,
   b, db, calendar, email, stripe, n8n,
   retellApiKey: env("RETELL_API_KEY"),
   vapiSecret: env("VAPI_SERVER_SECRET"),

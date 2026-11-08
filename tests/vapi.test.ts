@@ -97,12 +97,16 @@ describe("Vapi adapter", () => {
 
   it("serves the demo pages it was given, and nothing else, on GET", async () => {
     const db = new Db(":memory:");
-    const app = createApp({ b: loadBusiness(DENTAL_DIR), db, calendar: new MemoryCalendar(), email: new MemoryEmail(), vapiSecret: SECRET, publicBaseUrl: "https://desk.test", linkSecret: LINK, sitePages: { "/": "<p>home</p>", "/demos/rapid-rooter-plumbing/": "<p>plumber</p>" } });
+    const app = createApp({ b: loadBusiness(DENTAL_DIR), db, calendar: new MemoryCalendar(), email: new MemoryEmail(), vapiSecret: SECRET, publicBaseUrl: "https://desk.test", linkSecret: LINK, sitePages: { "/": "<p>home</p>", "/demos/rapid-rooter-plumbing/": "<p>plumber</p>" }, siteAssets: { "/og.png": { type: "image/png", data: Buffer.from([137, 80, 78, 71]) } } });
     const get = (url: string) => app.handle({ method: "GET", url, headers: {}, body: Buffer.alloc(0) });
     expect((await get("/")).body).toBe("<p>home</p>");
     expect((await get("/demos/rapid-rooter-plumbing")).body).toBe("<p>plumber</p>");
     expect((await get("/demos/rapid-rooter-plumbing/")).headers["content-type"]).toContain("text/html");
     expect((await get("/.env")).status).toBe(404);
+    const img = await get("/og.png");
+    expect(img.headers["content-type"]).toBe("image/png");
+    expect(img.raw?.length).toBe(4);
+    expect((await get("/business.json")).status).toBe(404);
     expect((await get("/healthz")).status).toBe(200);
     app.close();
     db.close();
