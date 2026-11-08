@@ -73,8 +73,16 @@ describe("Resend", () => {
     expect(await sendOnce(db, r, m, 1)).toBe("sent");
     expect(await sendOnce(db, r, m, 2)).toBe("already_sent");
     expect(calls).toHaveLength(1);
-    expect((calls[0]!.headers as Record<string, string>)["idempotency-key"]).toBe("k1");
+    const key = (calls[0]!.headers as Record<string, string>)["idempotency-key"];
+    expect(key).toMatch(/^k1:[0-9a-f]{24}$/);
     expect(JSON.parse(String(calls[0]!.body))).toMatchObject({ from: "Demo <a@b.test>", to: ["x@y.test"], subject: "s", text: "t" });
+    // A retry of the same email carries the same key; a different email with the same logical key does not
+    // (each prospect sample's database starts its ids at apt_00001, and Resend's keys are account-wide).
+    await r.send(m);
+    await r.send({ ...m, to: "other@y.test", subject: "another business" });
+    const keys = calls.map((c) => (c.headers as Record<string, string>)["idempotency-key"]);
+    expect(keys[1]).toBe(key);
+    expect(keys[2]).not.toBe(key);
     db.close();
   });
   it("an error answer throws with the reason", async () => {
