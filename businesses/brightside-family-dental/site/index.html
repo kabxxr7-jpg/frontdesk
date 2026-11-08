@@ -96,8 +96,8 @@ footer{padding:36px 0 48px;color:var(--muted);font-size:14px;border-top:1px soli
 <div>
 <h1>Every call answered.<br><em>Every appointment booked.</em></h1>
 <p class="lead">Ava is an AI receptionist for Brightside Family Dental. Ava picks up day and night, answers questions, books straight into the calendar and emails the patient a confirmation, so no caller hears voicemail.</p>
-<div class="btns"><a class="btn primary" href="tel:+19293721161">Call (929) 372-1161</a></div>
-<p class="fine" id="webcall-note">The phone number is a US number. Free to try; each call ends after 5 minutes.</p>
+<div class="btns"><button class="btn primary" id="webcall" type="button"><span class="dot"></span><span id="webcall-label">Talk to Ava in your browser</span></button><a class="btn ghost" href="tel:+19293721161">Call (929) 372-1161</a></div>
+<p class="fine" id="webcall-note">Browser calls need your microphone. The phone number is a US number. Free to try; each call ends after 5 minutes.</p>
 </div>
 <div class="phone" aria-label="Example conversation">
 <div class="phone-top"><div class="avatar">A</div><div><b>Ava &middot; Brightside Family Dental</b><span>&#9679; Answering now</span></div></div>
@@ -165,7 +165,7 @@ footer{padding:36px 0 48px;color:var(--muted);font-size:14px;border-top:1px soli
 <h2>Try it yourself</h2>
 <p class="sub">Call like a real patient would. A few ideas:</p>
 <ol class="try"><li>Book an appointment: &quot;I&#39;d like a new patient exam and cleaning next week, in the morning.&quot; Give your real email to get the confirmation.</li><li>Ask a question: &quot;Do you take Delta Dental?&quot; or &quot;How much is whitening?&quot;</li><li>Change your mind: call back, give the code from your email, and move or cancel it.</li><li>Try to trip it up: ask for a time when they&#39;re closed, or one that&#39;s already taken.</li><li>Say something urgent, like &quot;knocked out&quot;: it stops booking and gets you to a person.</li></ol>
-<div class="btns" style="margin-top:24px"><a class="btn primary" href="tel:+19293721161">Call (929) 372-1161</a></div>
+<div class="btns" style="margin-top:24px"><button class="btn primary" id="webcall2" type="button"><span class="dot"></span><span id="webcall2-label">Talk to Ava in your browser</span></button><a class="btn ghost" href="tel:+19293721161">Call (929) 372-1161</a></div>
 </div>
 </section>
 
@@ -221,7 +221,30 @@ footer{padding:36px 0 48px;color:var(--muted);font-size:14px;border-top:1px soli
 </section>
 
 <div class="wrap"><footer>Brightside Family Dental is a fictional business made for a demonstration. Its name, address, phone numbers, staff and prices are invented. &middot; Built by Kabiir Labs.</footer></div>
-
-
+<script type="module">
+const btn = document.getElementById("webcall"), label = document.getElementById("webcall-label"), note = document.getElementById("webcall-note");
+const idle = label.textContent;
+let vapi = null, live = false;
+function set(state, text) { btn.dataset.state = state; label.textContent = text; }
+btn.addEventListener("click", async () => {
+  if (live) { vapi && vapi.stop(); return; }
+  set("connecting", "Connecting...");
+  try {
+    if (!vapi) {
+      const mod = await import("https://cdn.jsdelivr.net/npm/@vapi-ai/web@3.0.1/+esm");
+      const Vapi = typeof mod.default === "function" ? mod.default : mod.default.default;
+      vapi = new Vapi("314a684b-9a98-49d9-a7bd-bfe0068eecf2");
+      vapi.on("call-start", () => { live = true; set("live", "End call"); note.textContent = "You're live. Talk normally, like a phone call."; });
+      vapi.on("call-end", () => { live = false; set("idle", idle); note.textContent = "Call ended. Check your email if you booked something."; });
+      vapi.on("error", () => { live = false; set("idle", idle); note.textContent = "That didn't connect. Allow the microphone and try again, or use the phone number."; });
+    }
+    await vapi.start("d97236a2-f7c0-468b-80af-77ed32a6fe8e");
+  } catch {
+    live = false; set("idle", idle);
+    note.textContent = "That didn't connect. Allow the microphone and try again, or use the phone number.";
+  }
+});
+</script>
+<script type="module">const b2=document.getElementById("webcall2");if(b2)b2.addEventListener("click",()=>{document.getElementById("webcall").click();window.scrollTo({top:0,behavior:"smooth"});});</script>
 </body>
 </html>

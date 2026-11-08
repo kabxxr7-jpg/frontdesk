@@ -167,7 +167,8 @@ btn.addEventListener("click", async () => {
   set("connecting", "Connecting...");
   try {
     if (!vapi) {
-      const { default: Vapi } = await import(${JSON.stringify(VAPI_WEB_SDK)});
+      const mod = await import(${JSON.stringify(VAPI_WEB_SDK)});
+      const Vapi = typeof mod.default === "function" ? mod.default : mod.default.default;
       vapi = new Vapi(${JSON.stringify(o.webCall.publicKey)});
       vapi.on("call-start", () => { live = true; set("live", "End call"); note.textContent = "You're live. Talk normally, like a phone call."; });
       vapi.on("call-end", () => { live = false; set("idle", idle); note.textContent = "Call ended. Check your email if you booked something."; });
