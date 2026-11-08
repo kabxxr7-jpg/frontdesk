@@ -1,6 +1,7 @@
 // Email through Resend's REST API (no SDK), or a memory outbox for tests and for running without a key.
 // Every send carries an idempotency key, and the database ledger records what was delivered, so a retried webhook
 // or a double click never sends the same email twice.
+import { createHash } from "node:crypto";
 import type { Db } from "./db.ts";
 
 export interface EmailMessage {
@@ -44,27 +45,30 @@ export class ResendEmail implements EmailSender {
 
   async send(m: EmailMessage): Promise<{ id: string }> {
     const f = this.o.fetch ?? ((url, init) => fetch(url, init));
+    const body = JSON.stringify({
+      from: this.o.from,
+      to: [m.to],
+      subject: m.subject,
+      text: m.text,
+      ...(m.html ? { html: m.html } : {}),
+      ...(m.replyTo ? { reply_to: m.replyTo } : {}),
+    });
     const res = await f("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         authorization: `Bearer ${this.o.apiKey}`,
         "content-type": "application/json",
-        // Resend keeps idempotency keys for 24 hours; at most 256 characters.
-        "idempotency-key": m.idempotencyKey.slice(0, 256),
+        // Resend keeps idempotency keys for 24 hours, account-wide; at most 256 characters. Appointment ids repeat
+        // across databases (each prospect sample has its own, starting at apt_00001), so the key also carries a hash
+        // of the message: a retry of the same email still matches, a different email never collides.
+        "idempotency-key": `${m.idempotencyKey.slice(0, 200)}:${createHash("sha256").update(body).digest("hex").slice(0, 24)}`,
       },
-      body: JSON.stringify({
-        from: this.o.from,
-        to: [m.to],
-        subject: m.subject,
-        text: m.text,
-        ...(m.html ? { html: m.html } : {}),
-        ...(m.replyTo ? { reply_to: m.replyTo } : {}),
-      }),
+      body,
       signal: AbortSignal.timeout(this.o.timeoutMs ?? 8000),
     });
-    const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };
-    if (!res.ok || !body.id) throw new Error(`Resend refused the email: ${res.status} ${body.name ?? ""} ${body.message ?? ""}`.trim().slice(0, 300));
-    return { id: body.id };
+    const out = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };
+    if (!res.ok || !out.id) throw new Error(`Resend refused the email: ${res.status} ${out.name ?? ""} ${out.message ?? ""}`.trim().slice(0, 300));
+    return { id: out.id };
   }
 }
 

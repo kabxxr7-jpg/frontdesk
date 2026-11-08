@@ -5,6 +5,7 @@ import { GoogleCalendar, MemoryCalendar, type Calendar } from "../src/calendar.t
 import { Db } from "../src/db.ts";
 import { MemoryEmail, ResendEmail, type EmailSender } from "../src/email.ts";
 import { createApp, createHttpServer, createRouter, type Tenant } from "../src/server.ts";
+import { ChatLimits, GeminiModel, type ChatConfig } from "../src/chat.ts";
 import { StripeClient } from "../src/stripe.ts";
 import { env, loadEnv } from "./env.ts";
 
@@ -48,6 +49,20 @@ const n8nUrl = env("N8N_WEBHOOK_URL");
 const n8nSecret = env("N8N_WEBHOOK_SECRET");
 const n8n = n8nUrl && n8nSecret ? { url: n8nUrl, secret: n8nSecret } : undefined;
 
+// Website chat (Gemini). One model client and one set of limits for the main demo and every sample, so the daily
+// spend cap covers them all.
+const geminiKey = env("GEMINI_API_KEY");
+const chatShared = geminiKey
+  ? {
+      model: new GeminiModel({ apiKey: geminiKey, model: env("GEMINI_MODEL"), fallbacks: env("GEMINI_FALLBACK_MODELS")?.split(",").map((x) => x.trim()).filter(Boolean) }),
+      limits: new ChatLimits({ dailyUsd: Number(env("CHAT_DAILY_USD") ?? "1"), dailyMessages: Number(env("CHAT_DAILY_MESSAGES") ?? "600") }),
+      // The demo pages are served at SITE_URL (kabiirlabs.com) as well as at PUBLIC_BASE_URL (desk.kabiirlabs.com).
+      allowedOrigins: [env("SITE_URL") ?? "", ...(env("CHAT_ORIGINS") ?? "").split(",")].map((x) => x.trim().replace(/\/+$/, "")).filter(Boolean),
+    }
+  : undefined;
+const chatFor = (): ChatConfig | undefined => (chatShared ? { ...chatShared } : undefined);
+if (!chatShared) console.error("chat: off (GEMINI_API_KEY not set)");
+
 // The demo pages built by `npm run build:public`, served at / and /demos/<slug>/ (same address as the line).
 const sitePages: Record<string, string> = {};
 if (existsSync("public/index.html")) sitePages["/"] = readFileSync("public/index.html", "utf8");
@@ -71,6 +86,7 @@ const app = createApp({
   sitePages,
   siteAssets,
   b, db, calendar, email, stripe, n8n,
+  chat: chatFor(),
   retellApiKey: env("RETELL_API_KEY"),
   vapiSecret: env("VAPI_SERVER_SECRET"),
   publicBaseUrl: need("PUBLIC_BASE_URL"),
@@ -104,6 +120,7 @@ for (const slug of existsSync("prospects") ? readdirSync("prospects") : []) {
       expiresAt: pb.prospect.expiresAt,
       app: createApp({
         b: pb, db: pdb, calendar: pcal, email: pemail,
+        chat: chatFor(),
         vapiSecret: env("VAPI_SERVER_SECRET"),
         publicBaseUrl: `${base}/t/${slug}`,
         linkSecret: need("LINK_SECRET"),
@@ -124,7 +141,7 @@ const port = Number(env("PORT") ?? "8080");
 const host = env("HOST") ?? "127.0.0.1";
 server.listen(port, host, () => {
   console.log(
-    `frontdesk for ${b.name}${tenants.size ? ` + ${tenants.size} prospect sample(s)` : ""} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"} | voice: ${[env("RETELL_API_KEY") ? "retell" : "", env("VAPI_SERVER_SECRET") ? "vapi" : ""].filter(Boolean).join("+")}`,
+    `frontdesk for ${b.name}${tenants.size ? ` + ${tenants.size} prospect sample(s)` : ""} on http://${host}:${port} | calendar: ${calendar.kind} | email: ${email.kind} | deposits: ${stripe ? "on (test mode)" : "off"} | n8n: ${n8n ? "on" : "off"} | chat: ${chatShared ? `on (${chatShared.model.name}, cap ${chatShared.limits.dailyUsd} USD/day)` : "off"} | voice: ${[env("RETELL_API_KEY") ? "retell" : "", env("VAPI_SERVER_SECRET") ? "vapi" : ""].filter(Boolean).join("+")}`,
   );
 });
 for (const sig of ["SIGINT", "SIGTERM"] as const) {

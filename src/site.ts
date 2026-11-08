@@ -10,6 +10,7 @@ import { formatPhone, matchFaq, renderHours, usd } from "./text.ts";
 import { addDays, localYmd, spokenDateTime, weekdayIndex, weekdayName, ymdToUtcMidnightMs, zonedToUtc, type Ymd } from "./time.ts";
 import { appointmentEmail, eventForAppointment, type Deps } from "./tools.ts";
 import { beginMessage } from "./agent-config.ts";
+import { chatWidget } from "./chat-widget.ts";
 
 export interface SiteOptions {
   /** The real number (E.164). */
@@ -38,6 +39,8 @@ export interface SiteOptions {
   ogImage?: string | undefined;
   /** One line under the builder's name in the top strip. */
   builderLine?: string | undefined;
+  /** Website chat widget ("Chat with Ava"), posting to this endpoint on the same server. */
+  chat?: { endpoint: string } | undefined;
 }
 
 const an = (w: string): string => (/^[aeiou]/i.test(w) ? `an ${w}` : `a ${w}`);
@@ -184,6 +187,7 @@ export function buildSite(b: Business, o: SiteOptions): string {
     `Ask a question: ${(b.demo?.tryQuestions ?? ["What are your hours on Saturday?"]).map((q) => `"${q}"`).join(" or ")}`,
     `Change your mind: call back, give the code from your email, and move or cancel it.`,
     `Try to trip it up: ask for a time when they're closed, or one that's already taken.`,
+    ...(o.chat ? [`Prefer typing? Open the chat and do the same in text: it books into the same calendar and sends the same email.`] : []),
     `Say something urgent${b.urgent.rules[0] ? `, like "${b.urgent.rules[0].phrases[0]}"` : ""}: it stops booking and gets you to a person.`,
   ];
 
@@ -191,12 +195,14 @@ export function buildSite(b: Business, o: SiteOptions): string {
 
   const canCall = Boolean(o.phone);
   const canWeb = Boolean(o.webCall);
+  const canChat = Boolean(o.chat);
   const tryButtons = [
     canWeb ? `<button class="btn primary" id="webcall" type="button"><span class="dot"></span><span id="webcall-label">Talk to ${e(agent)} in your browser</span></button>` : "",
     canCall ? `<a class="btn ${canWeb ? "ghost" : "primary"}" href="${e(telHref(o.phone as string))}">Call ${e(formatPhone(o.phone as string))}</a>` : "",
+    o.chat ? `<button class="btn ${canWeb || canCall ? "ghost" : "primary"}" type="button" data-chat-open>Chat with ${e(agent)}</button>` : "",
   ].join("");
-  const tryNote = canWeb || canCall
-    ? `<p class="fine" id="webcall-note">${canWeb ? "Browser calls need your microphone. " : ""}${canCall ? "The phone number is a US number. " : ""}Free to try; each call ends after 5 minutes.</p>`
+  const tryNote = canWeb || canCall || canChat
+    ? `<p class="fine" id="webcall-note">${canWeb ? "Browser calls need your microphone. " : ""}${canCall ? "The phone number is a US number. " : ""}${canWeb || canCall ? "Free to try; each call ends after 5 minutes." : "Free to try."}</p>`
     : o.liveDemo
       ? `<p class="fine">This page shows the same receptionist set up for ${e(an(b.vertical))}. To talk to it live, try <a href="${e(o.liveDemo.url)}">the ${e(o.liveDemo.name)} demo</a>; it runs on the same engine.</p>`
       : `<p class="fine">The live line for this demo is being set up.</p>`;
@@ -460,6 +466,7 @@ ${pr ? `<li><b>Real:</b> the AI receptionist, the calendar it books into, and th
 
 <div class="wrap"><footer>${e(b.fictionNote)} &middot; Built by ${e(builder)}.</footer></div>
 ${webScript}
+${o.chat ? chatWidget(b, o.chat) : ""}
 ${o.webCall ? `<script type="module">const b2=document.getElementById("webcall2");if(b2)b2.addEventListener("click",()=>{document.getElementById("webcall").click();window.scrollTo({top:0,behavior:"smooth"});});</script>` : ""}
 </body>
 </html>
