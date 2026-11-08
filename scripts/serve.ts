@@ -63,6 +63,8 @@ const app = createApp({
   publicBaseUrl: need("PUBLIC_BASE_URL"),
   linkSecret: need("LINK_SECRET"),
   teamEmail: env("TEAM_EMAIL"),
+  // Reply-To on caller emails. Unset by default: the team inbox is private and must not reach callers.
+  replyTo: env("REPLY_TO"),
   transfersLive: env("TRANSFERS_LIVE") === "true",
   maxCallsPerDay: Number(env("MAX_CALLS_PER_DAY") ?? "40"),
   log: (l) => console.log(`${new Date().toISOString()} ${l}`),

@@ -105,7 +105,7 @@ export function createApp(c: AppConfig): App {
   const timers = new Set<NodeJS.Timeout>();
   const deps: Deps = {
     b: c.b, db: c.db, calendar: c.calendar, email: c.email, publicBaseUrl: c.publicBaseUrl.replace(/\/+$/, ""), linkSecret: c.linkSecret,
-    depositsEnabled: Boolean(c.stripe), transfersLive: c.transfersLive ?? false, replyTo: c.replyTo ?? c.teamEmail, log,
+    depositsEnabled: Boolean(c.stripe), transfersLive: c.transfersLive ?? false, replyTo: c.replyTo, log,
     ...(c.stripe ? { expireCheckout: (id: string) => (c.stripe as NonNullable<AppConfig["stripe"]>).client.expireCheckout(id) } : {}),
     background: (p) => {
       pending.add(p);
