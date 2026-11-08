@@ -1,6 +1,6 @@
 # frontdesk
 
-A phone front desk for appointment businesses. It answers calls on a real number, answers questions from the business's own fact sheet, books into Google Calendar without double booking, emails the caller a confirmation with a code, takes a deposit through Stripe Checkout, routes emergencies to a person, and sends every call's summary to a CRM and the team through n8n.
+A phone front desk for appointment businesses, with a website chat that does the same in text. It answers calls on a real number, answers questions from the business's own fact sheet, books into Google Calendar without double booking, emails the caller a confirmation with a code, takes a deposit through Stripe Checkout, routes emergencies to a person, and sends every call's summary to a CRM and the team through n8n.
 
 The same engine is re-skinned for a new business from a short brief: `npm run reskin -- briefs/<name>.json` writes the business data, the agent prompt, the Vapi and Retell configurations and a demo page.
 
@@ -16,6 +16,7 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 | Team summary after each call | **Real, verified 7 Nov 2026** | Vapi's end-of-call report produced one summary email to the team inbox |
 | Stripe deposit | **Real, test mode.** Checkout page verified 7 Nov 2026; the paid webhook is not yet verified on a live call | A booking opened a real Stripe Checkout session (test mode; live keys are refused). No money moves |
 | Browser call | **Real, verified 8 Nov 2026** | "Talk to Ava in your browser" on the demo page (Vapi web SDK, public key restricted to the site); tested on a phone on mobile data |
+| Website chat ("Chat with Ava") | **Real, verified 8 Nov 2026 on a local copy of the server; on kabiirlabs.com once this branch is deployed** | The same six tools as the phone agent, driven by Google Gemini (Flash-Lite) with function calling. Through the chat in a browser: a booking created the Google Calendar event and the confirmation email arrived in Gmail; a move and a cancel by code updated the calendar and sent their emails. The Gemini key stays on the server |
 | Call recordings | **Off** | Recording is switched off on the assistant; the demo is calling the line, not listening to a recording |
 | Retell | Built and tested in code, not funded | The same agent runs on Retell with `npm run retell:setup`; no Retell number was bought |
 | n8n to HubSpot / team email / GoHighLevel | Workflow written, not yet connected; GoHighLevel off (no trial account) | `deploy/n8n/` |
@@ -30,6 +31,8 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 | Double booking under load | 20 simultaneous bookings for the same dentist and time: 1 booked, 19 refused with 3 alternatives each, 260 ms in all | a race script against a local server, 7 Nov 2026 |
 | Tool latency to the real calendar | 1.2-1.7 s per tool call (availability, book, cancel) over a public tunnel | 7 Nov 2026, one run of each |
 | Re-skin | 0.02 s per business for the generated files (about 0.4 s for the whole command); dental and plumber both regenerated and pass their tests, 8 Nov 2026 | `npm run reskin` |
+| Chat reply time | 0.9-4.8 s per reply (about 1 s without a tool, 3-5 s with one), 16 replies | server log, local server against Gemini, 8 Nov 2026 |
+| Chat limits | 500 characters a message, 30 messages a chat, 20 per visitor in 10 min and 80 a day, 600 a day in all, a daily spend cap (default $1, estimated from tokens), 5 model rounds a message | `src/chat.ts`, tests in `tests/chat.test.ts` |
 | Cost per call minute | About $0.13 on Vapi (a 3 min 04 s call cost $0.39) | Vapi call log, 7 Nov 2026 |
 
 ## How a call flows
@@ -46,7 +49,7 @@ Each line says what has actually been run, and when. Nothing is marked done befo
 
 ```bash
 npm ci
-npm test               # 161 tests
+npm test               # 179 tests
 npm run typecheck
 cp .env.example .env   # fill in; docs/ACCOUNTS.md has the click steps
 npm start
@@ -100,7 +103,7 @@ Caddy serves the demo page on the domain, the server on `desk.<domain>` and n8n 
 |---|---|
 | `briefs/` | Short business briefs (input to the re-skin) |
 | `businesses/<slug>/` | Generated: `business.json`, `prompt.md`, Vapi and Retell JSON, `site/index.html` |
-| `src/` | Server, Vapi adapter, tools, scheduler, SQLite store, Google Calendar, Resend, Stripe, post-call summary, re-skin, demo page |
+| `src/` | Server, Vapi adapter, website chat (`chat.ts`, `chat-widget.ts`), tools, scheduler, SQLite store, Google Calendar, Resend, Stripe, post-call summary, re-skin, demo page |
 | `scripts/` | `serve.ts`, `reskin.ts`, `vapi-setup.ts`, `retell-setup.ts`, `check-live.ts`, `build-public.ts` |
 | `deploy/` | Caddyfile, droplet setup, push script, n8n workflow; `docker-compose.yml` at the root |
 | `docs/` | Account click steps, go-live runbook, vendor sources and costs |

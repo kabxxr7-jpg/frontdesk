@@ -96,6 +96,7 @@ function liveOptions() {
     ...(pageUrl && existsSync(join(dir, "site", "og.png")) ? { ogImage: `${pageUrl}og.png` } : {}),
     ...(env("BUILDER_LINE") ? { builderLine: env("BUILDER_LINE") as string } : {}),
     ...(isActive && publicKey && assistantId ? { webCall: { publicKey, assistantId } } : {}),
+    ...(isActive && env("GEMINI_API_KEY") ? { chat: { endpoint: "/chat" } } : {}),
     ...(!isActive && active ? { liveDemo: { url: active.url, name: active.name } } : {}),
     otherDemos: all.map(({ url, name, vertical }) => ({ url, name, vertical })),
   };

@@ -96,6 +96,7 @@ writeFileSync(
     depositsOn: false,
     crmOn: false,
     webCall: { publicKey, assistantId },
+    ...(env("GEMINI_API_KEY") ? { chat: { endpoint: `/t/${slug}/chat` } } : {}),
     builder,
     ...(env("BUILDER_URL") ? { builderUrl: env("BUILDER_URL") as string } : {}),
     pageUrl,

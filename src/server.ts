@@ -7,6 +7,7 @@
 //   POST /webhooks/stripe            checkout.session.completed, Stripe-Signature
 //   GET  /pay/<token>                creates or reuses a Stripe test-mode Checkout Session and redirects to it
 //   GET  /pay/done, /pay/cancelled   plain pages after Checkout
+//   POST /chat                       website chat (text version of the receptionist, same tools), see chat.ts
 // Business outcomes are HTTP 200 with a spoken-style message; 4xx only for malformed or unauthenticated requests.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { Business } from "./business.ts";
@@ -16,6 +17,7 @@ import { escapeHtml, sendOnce, type EmailSender } from "./email.ts";
 import { CALL_ID, handleRetellWebhook } from "./postcall.ts";
 import { DEFAULT_TOLERANCE_MS, ReplayGuard, verifyRetellSignature } from "./signature.ts";
 import { readPayToken, verifyStripeSignature, type StripeClient } from "./stripe.ts";
+import { Chat, clientIp, type ChatConfig } from "./chat.ts";
 import { appointmentEmail, eventForAppointment, isToolName, runTool, type Deps } from "./tools.ts";
 import { usd } from "./text.ts";
 import { localYmd, spokenDateTime, zonedToUtc } from "./time.ts";
@@ -48,6 +50,8 @@ export interface AppConfig {
   sitePages?: Record<string, string>;
   /** Static files next to the demo pages (preview images), by path. */
   siteAssets?: Record<string, { type: string; data: Buffer }>;
+  /** Website chat (POST /chat). Off when not set. */
+  chat?: ChatConfig | undefined;
 }
 
 export interface Req {
@@ -117,6 +121,7 @@ export function createApp(c: AppConfig): App {
     },
   };
   const guard = new ReplayGuard({ toleranceMs: DEFAULT_TOLERANCE_MS });
+  const chat = c.chat ? new Chat(deps, c.chat, clock) : undefined;
 
   function verifyRetell(req: Req): { ok: true; digest: string } | { ok: false; res: Res } {
     if (!retellKey) return { ok: false, res: json(404, { error: "not_found" }) };
@@ -367,6 +372,14 @@ export function createApp(c: AppConfig): App {
     }
   }
 
+  async function chatRoute(req: Req): Promise<Res> {
+    if (!chat) return json(404, { error: "chat_off" });
+    if (req.body.length > 4096) return json(413, { error: "too_large" });
+    if (!(header(req, "content-type") ?? "").startsWith("application/json")) return json(415, { error: "json_only" });
+    const r = await chat.handle({ body: parse(req), ip: clientIp(req.headers), origin: header(req, "origin") });
+    return json(r.status, r.body);
+  }
+
   async function handle(req: Req): Promise<Res> {
     const path = req.url.split("?")[0] ?? "/";
     if (req.body.length > MAX_BODY) return json(413, { error: "too_large" });
@@ -388,6 +401,7 @@ export function createApp(c: AppConfig): App {
     if (path === "/webhooks/retell-inbound") return inbound(req);
     if (path === "/webhooks/stripe") return stripeWebhook(req);
     if (path === "/vapi") return vapi(req);
+    if (path === "/chat") return chatRoute(req);
     return json(404, { error: "not_found" });
   }
 
